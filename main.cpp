@@ -19,21 +19,26 @@
 #include <utility>
 #include <vector>
 
-#define NUM_SEGMENTS 63
 #define VERT_LENGTH 4 //x,y,z,volume
-#define NUM_POINTS (NUM_SEGMENTS+1)
-#define SPHERE_LAYERS 8
 
+#define SPHERE_LAYERS 8
+#define FRAMES 512
+#define NUM_POINTS 64
+
+GLFWwindow* window;
 GLuint program;
 GLuint vao, vbo;
+GLuint ssaoFramebufferID, ssaoDepthTextureID;
 float radius = 1.0f;
 RtAudio adc(RtAudio::Api::LINUX_PULSE);
 GLfloat circleVertices[NUM_POINTS * VERT_LENGTH * SPHERE_LAYERS];
 
 kiss_fft_cfg cfg;
 
-float rawdata[1024];
-float freqs[1024];
+
+
+float rawdata[FRAMES];
+float freqs[FRAMES];
 
 float red_rawdata[NUM_POINTS];
 float red_freqs[NUM_POINTS];
@@ -42,14 +47,18 @@ float last_freqs[NUM_POINTS];
 double lastTime = glfwGetTime();
 int nbFrames = 0;
 
+void Render();
+
 enum VisMode{
   LINES,
   CIRCLE,
+  CIRCLE_FLAT,
   SPHERE,
   SPHERE_SPIRAL
 };
 
 VisMode mode = CIRCLE;
+
 
 int record(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
            double streamTime, RtAudioStreamStatus status, void *userData) {
@@ -59,20 +68,20 @@ int record(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
     }
   
   //printf("%d \n", nBufferFrames);
-  kiss_fft_cpx in[1024] = {};
+  kiss_fft_cpx in[FRAMES] = {};
   for (unsigned int i = 0; i < nBufferFrames; i++) {
     in[i].r = ((float *)inputBuffer)[i];
     rawdata[i] = ((float *)inputBuffer)[i];
   }
 
-  kiss_fft_cpx out[1024] = {};
+  kiss_fft_cpx out[FRAMES] = {};
   kiss_fft(cfg, in, out);
-  for (int i = 0; i < 1024; i++) {
+  for (int i = 0; i < FRAMES; i++) {
     freqs[i] = sqrt(out[i].r * out[i].r + out[i].i * out[i].i);
   }
 
-  int sample_group = 1024 / NUM_POINTS;
-  int fft_group = 400 / NUM_POINTS;
+  int sample_group = FRAMES / NUM_POINTS;
+  int fft_group = (FRAMES/3) / NUM_POINTS;
   for(int i = 0; i < NUM_POINTS; i++) {
     red_rawdata[i] = 0;
     red_freqs[i] = 0;
@@ -80,7 +89,7 @@ int record(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
       red_rawdata[i] += rawdata[i * sample_group + j];
     }
     for(int j = 0; j < fft_group; j++) {
-      red_freqs[i] += freqs[i * fft_group + j + 40];
+      red_freqs[i] += freqs[i * fft_group + j + 5];
     }
     red_freqs[i] += last_freqs[i];
     red_freqs[i] /= 2.0;
@@ -131,7 +140,7 @@ static void set_camera(float cam_x, float cam_y, float cam_z, float target_z) {
     GLint uniView = glGetUniformLocation(program, "view");
     glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-    glm::mat4 proj = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 1.0f, 10.0f);
+    glm::mat4 proj = glm::perspective(glm::radians(45.0f), 3840.0f / 2160.0f, 1.0f, 10.0f);
     GLint uniProj = glGetUniformLocation(program, "proj");
     glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 }
@@ -144,12 +153,14 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
       mode = VisMode::LINES;
     } else if (key == GLFW_KEY_C) {
       mode = VisMode::CIRCLE;
-    } else if (key == GLFW_KEY_S) {
+    } else if (key == GLFW_KEY_V) {
+      mode = VisMode::CIRCLE_FLAT;
+    }else if (key == GLFW_KEY_S) {
       mode = VisMode::SPHERE;
     } else if (key == GLFW_KEY_X) {
       mode = VisMode::SPHERE_SPIRAL;
     } else if (key == GLFW_KEY_F) {
-      set_camera(0.0f, -2.5f, 2.5f, 1.0f);
+      set_camera(0.0f, -2.5f, 2.5f, 0.75f);
     }
 }
 
@@ -159,7 +170,15 @@ static void resize(GLFWwindow* window, int width, int height){
 
     GLfloat uResolution[2] = { (float)width, (float)height };
     glUniform2fv(glGetUniformLocation(program, "uResolution"), 1, uResolution);
+
+    glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 1.0f, 10.0f);
+    GLint uniProj = glGetUniformLocation(program, "proj");
+    glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 }
+
+    // Get the depth buffer value at this pixel.   
+    
+
 
 bool Initialize() {
   getdevices();
@@ -170,7 +189,9 @@ bool Initialize() {
   parameters.nChannels = 1;
   parameters.firstChannel = 0;
   unsigned int sampleRate = 48000;
-  unsigned int bufferFrames = 1024;
+  unsigned int bufferFrames = FRAMES;
+
+  cfg = kiss_fft_alloc(FRAMES, 0, NULL, NULL);
 
   if (adc.openStream(NULL, &parameters, RTAUDIO_FLOAT32, sampleRate, &bufferFrames, &record)) {
     std::cout << '\n' << adc.getErrorText() << '\n' << std::endl;
@@ -182,7 +203,7 @@ bool Initialize() {
     std::cout << adc.getErrorText() << std::endl;
   }
 
-  cfg = kiss_fft_alloc(1024, 0, NULL, NULL);
+  
 
   // shaders
   std::ifstream v("../vertex.glsl");
@@ -250,7 +271,7 @@ bool Initialize() {
     return false;
   }
 
-  set_camera(0.0f, -0.1f, 5.0f, 0.0f);
+  set_camera(0.0f, -0.1f, 4.0f, 0.0f);
 
   glGenVertexArrays(1, &vao);
   glGenBuffers(1, &vbo);
@@ -267,13 +288,16 @@ bool Initialize() {
   glBindVertexArray(0);
 
   glEnable(GL_PROGRAM_POINT_SIZE);
-  glEnable(GL_POINT_SMOOTH);
-  glEnable(GL_BLEND);
+  //glEnable(GL_POINT_SMOOTH);
+  //glEnable(GL_BLEND);
 
-  glLineWidth(10.0);
+  glLineWidth(5.0);
+  
   printf("Init finished \n");
   return true;
 }
+
+float cur = 0.0;
 
 void Render() {
   glClear(GL_COLOR_BUFFER_BIT);
@@ -287,25 +311,37 @@ void Render() {
       lastTime += 1.0;
   }
 
+  std::vector<float> vertices;
+
   if (mode == LINES) {
-    for (int i = 0; i <= NUM_SEGMENTS; i++) {
-      circleVertices[i * VERT_LENGTH] = i * 0.0275 - 0.9;
-      circleVertices[i * VERT_LENGTH + 1] = red_freqs[i] * 0.1 - 0.9;
-      circleVertices[i * VERT_LENGTH + 2] = 0.0; 
-      circleVertices[i * VERT_LENGTH + 3] = red_freqs[i] * 0.1;
+    for (int i = 0; i < NUM_POINTS; i++) {
+      float vert[4] = {i * (4.0f/NUM_POINTS) - 2.0f, red_freqs[i] * 0.1f, 0.0, red_freqs[i] * 0.1f};
+      vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
     }
   } else if (mode == CIRCLE) {
-    for (int i = 0; i <= NUM_SEGMENTS; i++) {
-      float theta = 2.0f * M_PI * float(i) / float(NUM_SEGMENTS) - M_PI;
+    for (int i = 0; i < NUM_POINTS; i++) {
+      float theta = 2.0f * M_PI * float(i) / float(NUM_POINTS) - M_PI;
       float r = red_freqs[i] * 0.1 + 0.5;
 
       float x = radius * r * cosf(theta);
       float y = radius * r * sinf(theta);
 
-      circleVertices[i * VERT_LENGTH] = x;
-      circleVertices[i * VERT_LENGTH + 1] = y;
-      circleVertices[i * VERT_LENGTH + 2] = 0.0;
-      circleVertices[i * VERT_LENGTH + 3] = red_freqs[i] * 0.1;
+      float vert[4] = {x, y, 0.0, red_freqs[i] * 0.1f};
+      vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
+    }
+  } else if (mode == CIRCLE_FLAT) {
+    for (int i = 0; i < NUM_POINTS; i++) {
+      float theta1 = 2.0f * M_PI * float(i) / float(NUM_POINTS) - M_PI;
+      float theta2 = 2.0f * M_PI * float(i + 1) / float(NUM_POINTS) - M_PI;
+      float r = red_freqs[i] * 0.1 + 0.5;
+      
+      float c[4] = {0.0, 0.0, 0.0, 0.0};
+      vertices.insert(vertices.end(), std::begin(c), std::end(c));
+      float a[4] = {radius * r * cosf(theta1), radius * r * sinf(theta1), 0.0, red_freqs[i] * 0.1f};
+      vertices.insert(vertices.end(), std::begin(a), std::end(a));
+      float b[4] = {radius * r * sinf(theta2), radius * r * sinf(theta2), 0.0, 0.0};
+      vertices.insert(vertices.end(), std::begin(b), std::end(b));
+
     }
   } else if (mode == SPHERE) {
     for (int c = 0; c < SPHERE_LAYERS; c++) {
@@ -317,31 +353,27 @@ void Render() {
         float x = radius * layer * r * cosf(theta);
         float y = radius * layer * r * sinf(theta);
 
-        circleVertices[c * NUM_POINTS * VERT_LENGTH + i * VERT_LENGTH] = x;
-        circleVertices[c * NUM_POINTS * VERT_LENGTH + i * VERT_LENGTH + 1] = y;
-        circleVertices[c * NUM_POINTS * VERT_LENGTH + i * VERT_LENGTH + 2] = c * 0.2;
-        circleVertices[c * NUM_POINTS * VERT_LENGTH + i * VERT_LENGTH + 3] = red_freqs[i] * 0.1;
+        float vert[4] = {x, y, c * 0.2f, red_freqs[i] * 0.1f};
+        vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
       }
     }
   } else if (mode == SPHERE_SPIRAL) {
-    for (int i = 0; i < NUM_POINTS * SPHERE_LAYERS; i++) {
-      float theta = 2.0f * M_PI * float(i) / float(NUM_POINTS) - M_PI;
+    for (int i = 0; i < NUM_POINTS; i++) {
+      float theta = 5.0f * 2.0f * M_PI * float(i) / float(NUM_POINTS) - M_PI;
 
-      float r = freqs[i] * 0.1 + 0.5;
-      float percent = ((float)i / (float)(NUM_POINTS * SPHERE_LAYERS));
+      float r = red_freqs[i] * 0.1 + 0.5;
+      float percent = ((float)i / (float)(NUM_POINTS));
       float layer = sin(percent * M_PI);
       float x = radius * layer * r * cosf(theta);
       float y = radius * layer * r * sinf(theta);
 
-      circleVertices[i * VERT_LENGTH] = x;
-      circleVertices[i * VERT_LENGTH + 1] = y;
-      circleVertices[i * VERT_LENGTH + 2] = percent * 2.0;
-      circleVertices[i * VERT_LENGTH + 3] = freqs[i] * 0.1;
+      float vert[4] = {x, y, percent * 2.0f, red_freqs[i] * 0.1f};
+      vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
     }
   }
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(circleVertices), circleVertices, GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   // Use the shader program
@@ -352,20 +384,31 @@ void Render() {
 
   // Draw the circle as a line loop
   if (mode == LINES) {
-    glDrawArrays(GL_LINE_STRIP, 0, NUM_SEGMENTS + 1);
+    glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
     glDrawArrays(GL_POINTS, 0, NUM_POINTS);
+    //glDrawArrays(GL_TRIANGLES, 0, NUM_POINTS);
   } else if (mode == CIRCLE) {
-    glDrawArrays(GL_LINE_LOOP, 0, NUM_SEGMENTS + 1);
+    glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
     glDrawArrays(GL_POINTS, 0, NUM_POINTS);
-  } else if (mode == SPHERE) {
-    glDrawArrays(GL_LINE_STRIP, 0, SPHERE_LAYERS * NUM_POINTS);
-    glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
+  } else if (mode == CIRCLE_FLAT) {
+    //glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
+    //glDrawArrays(GL_POINTS, 0, NUM_POINTS);
+    glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS * 3);
   } else {
-    glDrawArrays(GL_LINE_STRIP, 0, SPHERE_LAYERS * NUM_POINTS);
-    //glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
+    
+    if (mode == SPHERE) {
+      glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, SPHERE_LAYERS * NUM_POINTS);
+      glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
+    } else {
+      glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
+      //glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
+    }
+    cur += 0.01;
+  set_camera(sin(cur), cos(cur), 4.0f, 0.0f);
   }
+
   
-  
+
 
   // Unbind VAO and shader
   glBindVertexArray(0);
@@ -380,7 +423,7 @@ int main() {
       exit(EXIT_FAILURE);
 
 
-  GLFWwindow* window = glfwCreateWindow(client_width, client_height, "My Title", NULL, NULL);
+  window = glfwCreateWindow(client_width, client_height, "My Title", NULL, NULL);
   if (!window) {
     printf("Failed to create window.\n");
     return 1;
