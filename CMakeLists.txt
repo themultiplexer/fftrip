@@ -4,7 +4,7 @@ project(triangle)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLINUX -Wall -Wextra -Werror -g -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -DLINUX -Wall -Wextra -Werror -g -Wno-unused-parameter -pg")
 
 find_package(X11 REQUIRED)
 set(OpenGL_GL_PREFERENCE LEGACY)

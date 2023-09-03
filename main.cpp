@@ -57,6 +57,12 @@ float last_freqs[NUM_POINTS];
 double lastTime = glfwGetTime();
 int nbFrames = 0;
 
+int zx = 100;
+int zy = 50;
+int dilation_size = 1;
+float angle = 0.2f;
+float sensitivity = 0.1;
+
 void Render();
 
 enum VisMode { LINES, CIRCLE, CIRCLE_FLAT, SPHERE, SPHERE_SPIRAL };
@@ -376,7 +382,7 @@ bool Initialize() {
 
 float cur = 0.0;
 
-cv::Mat image = cv::Mat(screen_height, screen_width, CV_8UC4);
+cv::Mat image = cv::Mat(screen_height, screen_width, CV_8UC3);
 
 
 void Render() {
@@ -397,7 +403,7 @@ void Render() {
   }
 
   std::vector<float> vertices;
-  float sensitivity = 0.2;
+  
 
   if (mode == LINES) {
     for (int i = 0; i < NUM_POINTS; i++) {
@@ -503,12 +509,7 @@ void Render() {
   if(POST_PROC){
     glBindTexture(GL_TEXTURE_2D, fbo_texture);
 
-    int zx = 50;
-    int zy = 50;
-    int dilation_size = 1;
-    float angle = 0.2f;
-
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, image.data);
     cv::blur(image, image, cv::Size(10,10));
     cv::addWeighted(image, 0.0, image, 0.98 - red_freqs[0] * 0.001, 0.0, image);
 
@@ -516,16 +517,16 @@ void Render() {
     cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
     cv::warpAffine(image, image, matRotation, image.size());
 
+    //Crop
     cv::Mat test2 = image(cv::Rect(zx, zy, screen_width - 2*zx, screen_height - 2 * zy));
+
     cv::Mat element = getStructuringElement( cv::MORPH_RECT, cv::Size( 2*dilation_size + 1, 2*dilation_size+1 ), cv::Point( dilation_size, dilation_size ) );
-    cv::dilate(image, image, element);
+    cv::dilate(test2, test2, element);
     cv::Mat image2 = cv::Mat(screen_height, screen_width, CV_8UC4);
     cv::resize(test2, image2, cv::Size(screen_width, screen_height));
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, screen_width, screen_height, GL_RGBA, GL_UNSIGNED_BYTE, image2.data);
-    glBindTexture( GL_TEXTURE_2D, 0);
-
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, screen_width, screen_height, GL_RGB, GL_UNSIGNED_BYTE, image2.data);
+    
     glUseProgram(program_postproc);
-    glBindTexture(GL_TEXTURE_2D, fbo_texture);
     glUniform1i(uniform_fbo_texture, 0);
     glEnableVertexAttribArray(attribute_v_coord_postproc);
 
@@ -533,6 +534,7 @@ void Render() {
     glVertexAttribPointer(attribute_v_coord_postproc,2, GL_FLOAT,  GL_FALSE,0, 0);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glDisableVertexAttribArray(attribute_v_coord_postproc);
+    glBindTexture( GL_TEXTURE_2D, 0);
   }
 }
 
@@ -541,8 +543,10 @@ int main() {
   if (!glfwInit())
     exit(EXIT_FAILURE);
 
-  //window = glfwCreateWindow(screen_width, screen_height, "My Title", NULL, NULL);
-  window = glfwCreateWindow(screen_width, screen_height, "My Title", glfwGetPrimaryMonitor(), nullptr);
+  glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+  window = glfwCreateWindow(screen_width, screen_height, "My Title", NULL, NULL);
+  //window = glfwCreateWindow(screen_width, screen_height, "My Title", glfwGetPrimaryMonitor(), nullptr);
+  printf("Hi.\n");
   if (!window) {
     printf("Failed to create window.\n");
     return 1;
