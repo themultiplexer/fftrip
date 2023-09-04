@@ -4,23 +4,29 @@
 #include <GL/glx.h>
 #include <GLFW/glfw3.h>
 #include <cstdio>
+#include <cstring>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/core/cuda.hpp>
 #include <opencv2/core/hal/interface.h>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <fstream>
 #include <kissfft/kiss_fft.h>
 #include <math.h>
+#include <opencv4/opencv2/core/mat.hpp>
 #include <rtaudio/RtAudio.h>
 #include <set>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <opencv2/core/opengl.hpp>
+#include <opencv2/core/ocl.hpp>
 
 #define VERT_LENGTH 4 // x,y,z,volume
 
@@ -37,9 +43,11 @@ float radius = 1.0f;
 RtAudio adc(RtAudio::Api::LINUX_PULSE);
 GLfloat circleVertices[NUM_POINTS * VERT_LENGTH * SPHERE_LAYERS];
 /* Global */
-GLuint fbo, fbo_texture, rbo_depth;
-GLuint program_postproc, attribute_v_coord_postproc, uniform_fbo_texture;
-GLuint vbo_fbo_vertices;
+GLuint fbo, fbo_texture, fbo_texture2, rbo_depth;
+
+GLubyte* colorBuffer = 0;
+GLubyte* colorBuffer2 = 0;
+cv::ogl::Texture2D texture, texture2;
 
 
 kiss_fft_cfg cfg;
@@ -57,17 +65,123 @@ float last_freqs[NUM_POINTS];
 double lastTime = glfwGetTime();
 int nbFrames = 0;
 
-int zx = 100;
-int zy = 50;
+int zx = 38;
+int zy = 21;
 int dilation_size = 1;
-float angle = 0.2f;
+int erosion_size = 1;
+float angle = 0.4f;
 float sensitivity = 0.1;
+float lineWidth = 30.0;
 
 void Render();
-
 enum VisMode { LINES, CIRCLE, CIRCLE_FLAT, SPHERE, SPHERE_SPIRAL };
-
 VisMode mode = CIRCLE;
+
+template <typename MAT>
+MAT effect1(MAT img) {
+    float f = (red_freqs[0] * 0.1);
+    cv::blur(img, img, cv::Size(10,10));
+    cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+    MAT rot = MAT(screen_height, screen_width, CV_8UC4);
+    cv::Point2f center((img.cols - 1)/2.0, (img.rows - 1)/2.0);
+    cv::Mat matRotation = cv::getRotationMatrix2D(center, angle * f , 1.0 );
+    cv::warpAffine(img, rot, matRotation, img.size());
+    cv::Mat element = getStructuringElement( cv::MORPH_RECT, cv::Size( 2*dilation_size + 1, 2*dilation_size+1 ), cv::Point( dilation_size, dilation_size ) );
+    cv::dilate(rot, rot, element);
+    MAT test2 = rot(cv::Rect(zx * f, zy * f, screen_width - 2*zx*f, screen_height - 2 * zy*f));
+    MAT image2 = MAT(screen_height, screen_width, CV_8UC4);
+    cv::resize(test2, image2, cv::Size(screen_width, screen_height));
+    return image2;
+}
+
+template <typename MAT>
+MAT effect2(MAT img) {
+    cv::blur(img, img, cv::Size(10,10));
+    cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+    MAT rot = MAT(screen_height, screen_width, CV_8UC4);
+    cv::Point2f center((img.cols - 1)/2.0, (img.rows - 1)/2.0);
+    cv::Mat matRotation = cv::getRotationMatrix2D(center, angle , 1.0 );
+    cv::warpAffine(img, rot, matRotation, img.size());
+
+    cv::Mat element = getStructuringElement( cv::MORPH_RECT, cv::Size( 2*dilation_size + 1, 2*dilation_size+1 ), cv::Point( dilation_size, dilation_size ) );
+    cv::dilate(rot, rot, element);
+    MAT image2 = MAT(screen_height, screen_width, CV_8UC4);
+    cv::resize(rot, image2, cv::Size(screen_width, screen_height));
+    return image2;
+}
+
+template <typename MAT>
+MAT effect3(MAT img) {
+    float f = (red_freqs[0] * 0.05);
+    cv::blur(img, img, cv::Size(10,10));
+    cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+    cv::Point2f center((img.cols - 1)/2.0, (img.rows - 1)/2.0);
+    //cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
+    //cv::warpAffine(img, img, matRotation, img.size());
+    
+    MAT test2 = img(cv::Rect(zx * f, zy* f, screen_width - 2*zx* f, screen_height - 2 * zy * f));
+    cv::Mat element = getStructuringElement( cv::MORPH_RECT, cv::Size( 2*dilation_size + 1, 2*dilation_size+1 ), cv::Point( dilation_size, dilation_size ) );
+    cv::dilate(test2, test2, element);
+    MAT image2 = MAT(screen_height, screen_width, CV_8UC4);
+    cv::resize(test2, image2, cv::Size(screen_width, screen_height));
+    return image2;
+}
+
+template <typename MAT>
+MAT effect4(MAT img) {
+    cv::blur(img, img, cv::Size(10,10));
+    cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+    cv::Point2f center((img.cols - 1)/2.0, (img.rows - 1)/2.0);
+    MAT rot = MAT(screen_height, screen_width, CV_8UC4);
+    cv::Mat trans_mat = (cv::Mat_<double>(2, 3) << 1, 0, 0, 0, 1, -20);
+    cv::warpAffine(img, rot, trans_mat, img.size());
+    MAT test2 = rot(cv::Rect(zx, zy, screen_width - 2*zx, screen_height - 2 * zy));
+    cv::Mat element = getStructuringElement( cv::MORPH_RECT, cv::Size( 2*dilation_size + 1, 2*dilation_size+1 ), cv::Point( dilation_size, dilation_size ) );
+    cv::dilate(test2, test2, element);
+    MAT image2 = MAT(screen_height, screen_width, CV_8UC4);
+    cv::resize(test2, image2, cv::Size(screen_width, screen_height));
+    return image2;
+}
+
+template <typename MAT>
+MAT effect5(MAT img) {
+    cv::blur(img, img, cv::Size(20,20));
+    cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+    cv::Point2f center((img.cols - 1)/2.0, (img.rows - 1)/2.0);
+    //cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
+    //cv::warpAffine(img, img, matRotation, img.size());
+    MAT test2 = img(cv::Rect(zx, zy, screen_width - 2*zx, screen_height - 2 * zy));
+    cv::Mat element = getStructuringElement( cv::MORPH_RECT, cv::Size( 2*dilation_size + 1, 2*dilation_size+1 ), cv::Point( dilation_size, dilation_size ) );
+    cv::erode(test2, test2, element);
+    MAT image2 = MAT(screen_height, screen_width, CV_8UC4);
+    cv::resize(test2, image2, cv::Size(screen_width, screen_height));
+    return image2;
+}
+
+template <typename MAT>
+MAT effect6(MAT img) {
+    cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+    cv::Point2f center((img.cols - 1)/2.0, (img.rows - 1)/2.0);
+    //cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
+    //cv::warpAffine(img, img, matRotation, img.size());
+    MAT test2 = img(cv::Rect(zx, zy, screen_width - 2*zx, screen_height - 2 * zy));
+    cv::Mat eelement = getStructuringElement( cv::MORPH_RECT, cv::Size( 2*dilation_size + 1, 2*dilation_size+1 ), cv::Point( dilation_size, dilation_size ) );
+    cv::dilate(test2, test2, eelement);
+    cv::Mat delement = getStructuringElement( cv::MORPH_RECT, cv::Size( 2*erosion_size + 1, 2*erosion_size+1 ), cv::Point( dilation_size, dilation_size ) );
+    cv::erode(test2, test2, delement);
+    MAT image2 = MAT(screen_height, screen_width, CV_8UC4);
+    cv::resize(test2, image2, cv::Size(screen_width, screen_height));
+    return image2;
+}
+
+#define NUM_EFFECTS 6
+
+template <typename MAT>
+MAT (*effect)(MAT) = effect1;
+
+template <typename MAT>
+MAT (*effects[NUM_EFFECTS])(MAT) = {effect1, effect2, effect3, effect4, effect5, effect6};
+
 
 int record(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
            double streamTime, RtAudioStreamStatus status, void *userData) {
@@ -170,8 +284,16 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action,
   } else if (key == GLFW_KEY_X) {
     mode = VisMode::SPHERE_SPIRAL;
   } else if (key == GLFW_KEY_F) {
-    set_camera(0.0f, -2.5f, 2.5f, 0.75f);
+    set_camera(0.0f, -2.5f, 2.5f, 0.2f);
+  } else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9 && action == GLFW_PRESS) {
+      int index = (key - GLFW_KEY_0);
+      if (index < NUM_EFFECTS) {
+        effect<cv::Mat> = effects<cv::Mat>[index];
+        effect<cv::UMat> = effects<cv::UMat>[index];
+        printf("Using effect %d\n", index);
+      }
   }
+    
 }
 
 static void resize(GLFWwindow *window, int width, int height) {
@@ -295,19 +417,19 @@ bool Initialize() {
     return false;
   }
 
-  program_postproc = glCreateProgram();
-  if (!loadShaders(&program_postproc, loadShaderContent("../postproc.v.glsl", "../postproc.f.glsl"))) {
-    return false;
-  }
   printf("Created program \n");
-  uniform_fbo_texture = glGetUniformLocation(program_postproc, "fbo_texture");
-
-
   set_camera(0.0f, -0.1f, 5.0f, 0.0f);
 
 
    if(POST_PROC){
       /* Texture */
+      colorBuffer = new GLubyte[screen_width * screen_height * 4];
+      memset(colorBuffer, 0, screen_width * screen_height * 4);
+
+      colorBuffer2 = new GLubyte[screen_width * screen_height * 4];
+      memset(colorBuffer2, 0, screen_width * screen_height * 4);
+
+      
       glActiveTexture(GL_TEXTURE0);
       glGenTextures(1, &fbo_texture);
       glBindTexture(GL_TEXTURE_2D, fbo_texture);
@@ -315,24 +437,34 @@ bool Initialize() {
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0,
-                  GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      texture = cv::ogl::Texture2D(cv::Size(screen_width, screen_height), cv::ogl::Texture2D::Format::RGBA, fbo_texture, false);
       glBindTexture(GL_TEXTURE_2D, 0);
+
+      //glActiveTexture(GL_TEXTURE1);
+      glGenTextures(1, &fbo_texture2);
+      glBindTexture(GL_TEXTURE_2D, fbo_texture2);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+      texture2 = cv::ogl::Texture2D(cv::Size(screen_width, screen_height), cv::ogl::Texture2D::Format::RGBA, fbo_texture2, false);
+      glBindTexture(GL_TEXTURE_2D, 0);
+
 
       /* Depth buffer */
       glGenRenderbuffers(1, &rbo_depth);
       glBindRenderbuffer(GL_RENDERBUFFER, rbo_depth);
-      glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, screen_width,
-                            screen_height);
+      glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, screen_width, screen_height);
       glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
       /* Framebuffer to link everything together */
       glGenFramebuffers(1, &fbo);
       glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                            fbo_texture, 0);
-      glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                GL_RENDERBUFFER, rbo_depth);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo_texture, 0);
+      glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo_depth);
+
       GLenum status;
       if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
         fprintf(stderr, "glCheckFramebufferStatus: error %p",
@@ -340,18 +472,6 @@ bool Initialize() {
         return 0;
       }
       glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-      /* init_resources */
-      GLfloat fbo_vertices[] = {
-        -1, -1,
-        1, -1,
-        -1,  1,
-        1,  1,
-      };
-      glGenBuffers(1, &vbo_fbo_vertices);
-      glBindBuffer(GL_ARRAY_BUFFER, vbo_fbo_vertices);
-      glBufferData(GL_ARRAY_BUFFER, sizeof(fbo_vertices), fbo_vertices, GL_STATIC_DRAW);
-      glBindBuffer(GL_ARRAY_BUFFER, 0);
    }
 
 
@@ -364,17 +484,16 @@ bool Initialize() {
   glBufferData(GL_ARRAY_BUFFER, sizeof(circleVertices), circleVertices, GL_STATIC_DRAW);
   glUseProgram(program);
 
-  glVertexAttribPointer(0, VERT_LENGTH, GL_FLOAT, GL_FALSE, VERT_LENGTH * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, VERT_LENGTH, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (GLvoid*)(4 * sizeof(GLfloat)));
+  glEnableVertexAttribArray(1);
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
 
   glEnable(GL_PROGRAM_POINT_SIZE);
-  //glEnable(GL_POINT_SMOOTH);
-  //glEnable(GL_BLEND);
-
-  glLineWidth(20.0);
+  glLineWidth(lineWidth);
 
   printf("Init finished \n");
   return true;
@@ -382,15 +501,16 @@ bool Initialize() {
 
 float cur = 0.0;
 
-cv::Mat image = cv::Mat(screen_height, screen_width, CV_8UC3);
+cv::Mat image = cv::Mat(screen_height, screen_width, CV_8UC4);
+
 
 
 void Render() {
+
   if(POST_PROC){
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   }
-
-  //glClear(GL_COLOR_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT);
 
   double currentTime = glfwGetTime();
   nbFrames++;
@@ -403,11 +523,10 @@ void Render() {
   }
 
   std::vector<float> vertices;
-  
 
   if (mode == LINES) {
     for (int i = 0; i < NUM_POINTS; i++) {
-      float vert[4] = {i * (4.0f / NUM_POINTS) - 2.0f, red_freqs[i] * sensitivity, 0.0, red_freqs[i] * sensitivity};
+      float vert[5] = {i * (4.0f / NUM_POINTS) - 2.0f, red_freqs[i] * sensitivity, 0.0, red_freqs[i] * sensitivity, (float)i/NUM_POINTS};
       vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
     }
   } else if (mode == CIRCLE) {
@@ -418,7 +537,7 @@ void Render() {
       float x = radius * r * cosf(theta);
       float y = radius * r * sinf(theta);
 
-      float vert[4] = {x, y, 0.0, red_freqs[i] * sensitivity};
+      float vert[5] = {x, y, 0.0, red_freqs[i] * sensitivity, (float)i/NUM_POINTS};
       vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
     }
   } else if (mode == CIRCLE_FLAT) {
@@ -427,13 +546,13 @@ void Render() {
       float theta2 = 2.0f * M_PI * float(i + 1) / float(NUM_POINTS) - M_PI;
       float r = red_freqs[i] * sensitivity + 0.5;
 
-      float c[4] = {0.0, 0.0, 0.0, 0.0};
+      float c[5] = {0.0, 0.0, 0.0, 0.0, (float)i/NUM_POINTS};
       vertices.insert(vertices.end(), std::begin(c), std::end(c));
-      float a[4] = {radius * r * cosf(theta1), radius * r * sinf(theta1), 0.0,
-                    red_freqs[i] * sensitivity};
+      float a[5] = {radius * r * cosf(theta1), radius * r * sinf(theta1), 0.0,
+                    red_freqs[i] * sensitivity, (float)i/NUM_POINTS};
       vertices.insert(vertices.end(), std::begin(a), std::end(a));
-      float b[4] = {radius * r * sinf(theta2), radius * r * sinf(theta2), 0.0,
-                    0.0};
+      float b[5] = {radius * r * sinf(theta2), radius * r * sinf(theta2), 0.0,
+                    0.0, (float)i/NUM_POINTS};
       vertices.insert(vertices.end(), std::begin(b), std::end(b));
     }
   } else if (mode == SPHERE) {
@@ -446,7 +565,7 @@ void Render() {
         float x = radius * layer * r * cosf(theta);
         float y = radius * layer * r * sinf(theta);
 
-        float vert[4] = {x, y, c * 0.2f, red_freqs[i] * sensitivity};
+        float vert[5] = {x, y, c * 0.2f, red_freqs[i] * sensitivity, (float)i/NUM_POINTS};
         vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
       }
     }
@@ -460,14 +579,13 @@ void Render() {
       float x = radius * layer * r * cosf(theta);
       float y = radius * layer * r * sinf(theta);
 
-      float vert[4] = {x, y, percent * 2.0f, red_freqs[i] * sensitivity};
+      float vert[5] = {x, y, percent * 2.0f, red_freqs[i] * sensitivity, (float)i/NUM_POINTS};
       vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
     }
   }
 
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), &vertices[0],
-               GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   // Use the shader program
@@ -480,22 +598,17 @@ void Render() {
   if (mode == LINES) {
     glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
     glDrawArrays(GL_POINTS, 0, NUM_POINTS);
-    // glDrawArrays(GL_TRIANGLES, 0, NUM_POINTS);
   } else if (mode == CIRCLE) {
     glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
     glDrawArrays(GL_POINTS, 0, NUM_POINTS);
   } else if (mode == CIRCLE_FLAT) {
-    // glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
-    // glDrawArrays(GL_POINTS, 0, NUM_POINTS);
     glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS * 3);
   } else {
-
     if (mode == SPHERE) {
       glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, SPHERE_LAYERS * NUM_POINTS);
       glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
     } else {
       glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
-      // glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
     }
     cur += 0.01;
     set_camera(sin(cur), cos(cur), 4.0f, 0.0f);
@@ -504,37 +617,52 @@ void Render() {
   // Unbind VAO and shader
   glBindVertexArray(0);
   glUseProgram(0);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   if(POST_PROC){
-    glBindTexture(GL_TEXTURE_2D, fbo_texture);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, image.data);
-    cv::blur(image, image, cv::Size(10,10));
-    cv::addWeighted(image, 0.0, image, 0.98 - red_freqs[0] * 0.001, 0.0, image);
+    if(true) {
+      cv::UMat u1, u2;
+      cv::ogl::convertFromGLTexture2D(texture, u1);
+      cv::ogl::convertFromGLTexture2D(texture2, u2);
+      cv::add(u1, effect<cv::UMat>(u2), u1);
+      
+      cv::ogl::convertToGLTexture2D(u1, texture);
+      u1.copyTo(u2);
+      cv::ogl::convertToGLTexture2D(u2, texture2);
 
-    cv::Point2f center((image.cols - 1)/2.0, (image.rows - 1)/2.0);
-    cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
-    cv::warpAffine(image, image, matRotation, image.size());
 
-    //Crop
-    cv::Mat test2 = image(cv::Rect(zx, zy, screen_width - 2*zx, screen_height - 2 * zy));
+      
+      texture.bind();
+      glEnable(GL_TEXTURE_2D);
+      glBegin(GL_QUADS);
+      glTexCoord2f(0.0f, 0.0f);
+      glVertex2f(-1.0f, -1.0f);
+      glTexCoord2f(1.0f, 0.0f);
+      glVertex2f(1.0f, -1.0f);
+      glTexCoord2f(1.0f, 1.0f);
+      glVertex2f(1.0f, 1.0f);
+      glTexCoord2f(0.0f, 1.0f);
+      glVertex2f(-1.0f, 1.0f);
+      glEnd();
+      glDisable(GL_TEXTURE_2D);
 
-    cv::Mat element = getStructuringElement( cv::MORPH_RECT, cv::Size( 2*dilation_size + 1, 2*dilation_size+1 ), cv::Point( dilation_size, dilation_size ) );
-    cv::dilate(test2, test2, element);
-    cv::Mat image2 = cv::Mat(screen_height, screen_width, CV_8UC4);
-    cv::resize(test2, image2, cv::Size(screen_width, screen_height));
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, screen_width, screen_height, GL_RGB, GL_UNSIGNED_BYTE, image2.data);
-    
-    glUseProgram(program_postproc);
-    glUniform1i(uniform_fbo_texture, 0);
-    glEnableVertexAttribArray(attribute_v_coord_postproc);
+    } else{
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_fbo_vertices);
-    glVertexAttribPointer(attribute_v_coord_postproc,2, GL_FLOAT,  GL_FALSE,0, 0);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glDisableVertexAttribArray(attribute_v_coord_postproc);
-    glBindTexture( GL_TEXTURE_2D, 0);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+        glReadPixels(0, 0, screen_width, screen_height, GL_RGBA, GL_UNSIGNED_BYTE, colorBuffer);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+
+        if (true) {
+          image.data = colorBuffer;
+          image = image + cv::Mat(screen_height, screen_width, CV_8UC4, colorBuffer2);
+          cv::Mat image2 = effect<cv::Mat>(image);
+          glDrawPixels(screen_width, screen_height, GL_RGBA, GL_UNSIGNED_BYTE, image2.data);
+          memcpy(colorBuffer2, image2.data, screen_width * screen_height * 4);
+        } else {
+          glDrawPixels(screen_width, screen_height, GL_RGBA, GL_UNSIGNED_BYTE, colorBuffer);      
+        }
+    }
   }
 }
 
@@ -543,9 +671,9 @@ int main() {
   if (!glfwInit())
     exit(EXIT_FAILURE);
 
-  glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-  window = glfwCreateWindow(screen_width, screen_height, "My Title", NULL, NULL);
-  //window = glfwCreateWindow(screen_width, screen_height, "My Title", glfwGetPrimaryMonitor(), nullptr);
+  //glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+  //window = glfwCreateWindow(screen_width, screen_height, "My Title", NULL, NULL);
+  window = glfwCreateWindow(screen_width, screen_height, "My Title", glfwGetPrimaryMonitor(), nullptr);
   printf("Hi.\n");
   if (!window) {
     printf("Failed to create window.\n");
@@ -559,6 +687,11 @@ int main() {
   printf("GL_VENDOR: %s\n", glGetString(GL_VENDOR));
   printf("GL_VERSION: %s\n", glGetString(GL_VERSION));
   printf("GL_RENDERER: %s\n", glGetString(GL_RENDERER));
+
+  if (cv::ocl::haveOpenCL())
+  {
+      cv::ogl::ocl::initializeContextFromGL();
+  }
 
   if (!Initialize()) {
     printf("Scene initialization failed.\n");
