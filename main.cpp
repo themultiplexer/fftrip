@@ -52,7 +52,7 @@ GLfloat circleVertices[NUM_POINTS * VERT_LENGTH * SPHERE_LAYERS];
 GLuint fbo, fbo_texture, fbo_texture2, rbo_depth;
 
 cv::ogl::Texture2D texture, texture2;
-cv::UMat background;
+cv::UMat background, remapmat;
 
 kiss_fft_cfg cfg;
 
@@ -77,12 +77,14 @@ float angle = 0.4f;
 float sensitivity = 0.1;
 float lineWidth = 30.0;
 
+bool background_enabled = true;
+
 void Render();
 enum VisMode { LINES, CIRCLE, CIRCLE_FLAT, SPHERE, SPHERE_SPIRAL };
 VisMode mode = CIRCLE;
 
 cv::UMat effect1(cv::UMat img) {
-	float f = (red_freqs[0] * 0.6);
+	float f = (red_freqs[0] * 0.4);
 	cv::blur(img, img, cv::Size(10, 10));
 	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
 	cv::UMat rot = cv::UMat(screen_height, screen_width, CV_8UC4);
@@ -113,7 +115,7 @@ cv::UMat effect2(cv::UMat img) {
 }
 
 cv::UMat effect3(cv::UMat img) {
-	float f = (red_freqs[0] * 0.6);
+	float f = (red_freqs[0] * 0.4);
 	cv::blur(img, img, cv::Size(10, 10));
 	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
@@ -210,7 +212,7 @@ int record(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
 		}
 		red_freqs[i] += last_freqs[i];
 		red_freqs[i] /= 2.0;
-		red_freqs[i] *= ((float)i / NUM_POINTS) + 0.1;
+		red_freqs[i] *= ((float)i / NUM_POINTS) + 0.2;
 	}
 
 	for (int i = 0; i < NUM_POINTS; i++) {
@@ -298,6 +300,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 			effect = effects[index];
 			printf("Using effect %d\n", index);
 		}
+	}
+	else if (key >= GLFW_KEY_B && action == GLFW_PRESS)  {
+		background_enabled = !background_enabled;
 	}
 
 }
@@ -399,20 +404,30 @@ bool loadShaders(GLuint* program, std::vector<std::tuple<GLenum, std::string, st
 
 bool Initialize() {
 	getdevices();
-	cv::Mat black = cv::Mat(cv::Size(screen_width, screen_height), CV_8UC4, cv::Scalar(0,0,0,0));
-	cv::Mat image = cv::imread("../../../apple.png", cv::IMREAD_UNCHANGED);
-	std::vector<cv::Mat> channels;
+	cv::Mat black = cv::Mat(cv::Size(screen_width, screen_height), CV_8UC4, cv::Scalar(0, 0, 0, 0));
+	cv::Mat image = cv::imread("../../../apple.png", cv::IMREAD_COLOR);
+	
+	std::vector<cv::Mat>channels;
 	cv::split(image, channels);
-
-	//cv::Mat blendedAlpha;
-	//cv::addWeighted(image, 1.0, channels[3], 1.0 / 255.0, 0, image);
-
+	cv::Mat alpha = cv::Mat::zeros(cv::Size(image.cols, image.rows), CV_8UC1);
+	channels.push_back(alpha);
+	cv::merge(channels, image);
+	
 	cv::Rect roi(black.cols / 2.0 - (image.cols / 2.0), black.rows / 2.0 - (image.rows / 2.0), image.cols, image.rows);
 	cv::flip(image, image, 0);
 	image.copyTo(black(roi));
 	cv::imwrite("../../../test.png", black);
 
 	black.copyTo(background);
+	cv::Mat remat = cv::Mat(cv::Size(screen_width, screen_height), CV_16SC2, cv::Scalar(0, 0));
+	for (int i = 0; i < remat.cols; i++)
+	{
+		for (int j = 0; j < remat.rows; j++)
+		{
+			remat.at<cv::Vec2s>(j, i) = cv::Vec2s(i * 2.0, j * 2.0);
+		}
+	}
+	remat.copyTo(remapmat);
 
 	RtAudio::StreamParameters parameters;
 	parameters.deviceId = adc.getDefaultInputDevice();
@@ -516,8 +531,6 @@ bool Initialize() {
 	glBindVertexArray(0);
 
 	glEnable(GL_PROGRAM_POINT_SIZE);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glLineWidth(lineWidth);
 
 	printf("Init finished \n");
@@ -657,10 +670,17 @@ void Render() {
 		cv::UMat u1, u2, u3;
 		cv::ogl::convertFromGLTexture2D(texture, u1);
 		cv::ogl::convertFromGLTexture2D(texture2, u2);
-		
+
 		cv::add(u1, effect(u2), u1);
-		
-		cv::add(u1, background, u3);
+
+		//background(cv::Rect(150, 150, 50, 50)).copyTo(background(cv::Rect(0, 0, 50, 50)));
+		if (background_enabled) {
+			cv::add(u1, background, u3);
+		}
+		else {
+			u3 = u1;
+		}
+		cv::remap(u3, u3, remapmat, cv::Mat(), cv::INTER_NEAREST);
 
 		cv::ogl::convertToGLTexture2D(u3, texture);
 		u1.copyTo(u2);
