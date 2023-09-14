@@ -38,6 +38,7 @@
 #include <filesystem>
 #include "colors.h"
 #include <chrono>
+#include "font_rendering.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -51,7 +52,7 @@ namespace fs = std::filesystem;
 #define SHADER_PATH "../../../"
 
 GLFWwindow* window;
-GLuint program;
+GLuint program, font_program;
 GLuint vao, vbo;
 GLuint ssaoFramebufferID, ssaoDepthTextureID;
 float radius = 1.0f;
@@ -98,7 +99,7 @@ float cur = 0.0;
 cv::Mat image = cv::Mat(screen_height, screen_width, CV_8UC4);
 GLfloat color[4] = { 1.0, 0.0, 0.0, 1.0 };
 
-enum VisMode { LINES, CIRCLE, CIRCLE_FLAT, SPHERE, SPHERE_SPIRAL };
+enum VisMode { LINES, CIRCLE, CIRCLE_FLAT, SPHERE, SPHERE_SPIRAL, TEXT };
 VisMode mode = CIRCLE;
 
 cv::UMat effect1(cv::UMat img) {
@@ -312,22 +313,27 @@ void getdevices() {
 }
 
 static void set_camera(float cam_x, float cam_y, float cam_z, float target_z) {
-	glUseProgram(program);
-	glm::mat4 trans = glm::mat4(1.0f);
-	trans = glm::rotate(trans, glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-	GLint uniTrans = glGetUniformLocation(program, "model");
-	glUniformMatrix4fv(uniTrans, 1, GL_FALSE, glm::value_ptr(trans));
+	GLuint programs[2] = { program, font_program };
+	for (int i = 0; i < 2; i++) {
+		glUseProgram(programs[i]);
 
-	glm::mat4 view = glm::lookAt(glm::vec3(cam_x, cam_y, cam_z),
-	glm::vec3(0.0f, 0.0f, target_z),
-	glm::vec3(0.0f, 0.0f, 1.0f));
-	GLint uniView = glGetUniformLocation(program, "view");
-	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+		glm::mat4 trans = glm::mat4(1.0f);
+		trans = glm::rotate(trans, glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		GLint uniTrans = glGetUniformLocation(programs[i], "model");
+		glUniformMatrix4fv(uniTrans, 1, GL_FALSE, glm::value_ptr(trans));
 
-	glm::mat4 proj =
-		glm::perspective(glm::radians(45.0f), 3840.0f / 2160.0f, 1.0f, 10.0f);
-	GLint uniProj = glGetUniformLocation(program, "proj");
-	glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+		glm::mat4 view = glm::lookAt(
+			glm::vec3(cam_x, cam_y, cam_z),
+			glm::vec3(0.0f, 0.0f, target_z),
+			glm::vec3(0.0f, 0.0f, 1.0f)
+		);
+		GLint uniView = glGetUniformLocation(programs[i], "view");
+		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+
+		glm::mat4 proj = glm::perspective(glm::radians(45.0f), 3840.0f / 2160.0f, 0.1f, 40.0f);
+		GLint uniProj = glGetUniformLocation(programs[i], "proj");
+		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+	}
 }
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action,
@@ -350,13 +356,16 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 	else if (key == GLFW_KEY_X) {
 		mode = VisMode::SPHERE_SPIRAL;
 	}
+	else if (key == GLFW_KEY_T && action == GLFW_PRESS) {
+		mode = VisMode::TEXT;
+	}
 	else if (key == GLFW_KEY_F) {
 		set_camera(0.0f, -2.5f, 2.5f, 0.2f);
 	}
 	else if (key == GLFW_KEY_R && action == GLFW_PRESS) {
 		set_camera(0.0f, -0.1f, 6.0f, 0.0f);
 	}
-	else if (key == GLFW_KEY_T && action == GLFW_PRESS) {
+	else if (key == GLFW_KEY_J && action == GLFW_PRESS) {
 		remap_enabled = !remap_enabled;
 	}
 	else if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
@@ -408,14 +417,16 @@ static void resize(GLFWwindow* window, int width, int height) {
 		return;
 	}
 	glViewport(0, 0, width, height);
-	glUseProgram(program);
+	GLuint programs[2] = { program, font_program };
+	for (int i = 0; i < 2; i++) {
+		glUseProgram(programs[i]);
 
-	GLfloat uResolution[2] = { (float)width, (float)height };
-	glUniform2fv(glGetUniformLocation(program, "uResolution"), 1, uResolution);
+		GLfloat uResolution[2] = { (float)width, (float)height };
+		glUniform2fv(glGetUniformLocation(programs[i], "iResolution"), 1, uResolution);
 
-	glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 1.0f, 10.0f);
-	GLint uniProj = glGetUniformLocation(program, "proj");
-	glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+		glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 1.0f, 10.0f);
+		glUniformMatrix4fv(glGetUniformLocation(programs[i], "proj"), 1, GL_FALSE, glm::value_ptr(proj));
+	}
 
 	if (POST_PROC) {
 		glBindTexture(GL_TEXTURE_2D, fbo_texture);
@@ -554,7 +565,10 @@ bool Initialize() {
 	if (!loadShaders(&program, loadShaderContent(SHADER_PATH + std::string("vertex.glsl"), SHADER_PATH + std::string("fragment.glsl")))) {
 		return false;
 	}
-
+	font_program = glCreateProgram();
+	if (!loadShaders(&font_program, loadShaderContent(SHADER_PATH + std::string("font_vertex.glsl"), SHADER_PATH + std::string("font_fragment.glsl")))) {
+		return false;
+	}
 	printf("Created program \n");
 	set_camera(0.0f, -0.01f, 6.0f, 0.0f);
 
@@ -620,35 +634,16 @@ bool Initialize() {
 	glBindVertexArray(0);
 
 	glEnable(GL_POINT_SMOOTH);
+	glEnable(GL_CULL_FACE);
 	
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	printf("Init finished \n");
 	return true;
 }
 
 
-
-int color_cycle = 0;
-milliseconds last_ms;
-
-void Render() {
-	glLineWidth(lineWidth);
-	glPointSize(10.0);
-	if (POST_PROC) {
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	}
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	double currentTime = glfwGetTime();
-	nbFrames++;
-	if (currentTime - lastTime >=
-		1.0) { // If last prinf() was more than 1 sec ago
-		// printf and reset timer
-		printf("%f ms/frame\n", 1000.0 / double(nbFrames));
-		nbFrames = 0;
-		lastTime += 1.0;
-	}
-
+void CreateVBO() {
 	std::vector<float> vertices;
 
 	if (mode == LINES) {
@@ -713,15 +708,30 @@ void Render() {
 		}
 	}
 
-	
-
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
 
-	//color[0] = red_freqs[0] * 0.1;
-	//color[1] = red_freqs[NUM_POINTS / 2] * 0.1;
-	//color[2] = red_freqs[NUM_POINTS - 1] * 0.1;
+
+int color_cycle = 0;
+milliseconds last_ms;
+
+void Render() {
+	glLineWidth(lineWidth);
+	glPointSize(10.0);
+	if (POST_PROC) {
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	}
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	double currentTime = glfwGetTime();
+	nbFrames++;
+	if (currentTime - lastTime >= 1.0) {
+		printf("%f ms/frame\n", 1000.0 / double(nbFrames));
+		nbFrames = 0;
+		lastTime += 1.0;
+	}
 
 	if (color_mode == 2)
 	{
@@ -755,43 +765,51 @@ void Render() {
 
 	}
 
+	if (mode == TEXT)
+	{
+		glEnable(GL_BLEND);
+		RenderText(font_program, "NeverSayDie", -2.0f, 0.0f, 0.015f, glm::vec3(color[0], color[1], color[2]));
+		glDisable(GL_BLEND);
+	} else {
+		CreateVBO();
+		// Use the shader program
+		glUseProgram(program);
+		glUniform1i(glGetUniformLocation(program, "color_mode"), color_mode);
+		glUniform4fv(glGetUniformLocation(program, "color"), 1, color);
 
+		// Bind vertex array object (VAO)
+		glBindVertexArray(vao);
 
-	// Use the shader program
-	glUseProgram(program);
-	glUniform1i(glGetUniformLocation(program, "color_mode"), color_mode);
-	glUniform4fv(glGetUniformLocation(program, "color"), 1, color);
-
-	// Bind vertex array object (VAO)
-	glBindVertexArray(vao);
-
-	// Draw the circle as a line loop
-	if (mode == LINES) {
-		glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
-		glDrawArrays(GL_POINTS, 0, NUM_POINTS);
-	}
-	else if (mode == CIRCLE) {
-		glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
-		glDrawArrays(GL_POINTS, 0, NUM_POINTS);
-	}
-	else if (mode == CIRCLE_FLAT) {
-		glDrawArrays(GL_TRIANGLES, 0, NUM_POINTS * 3);
-	}
-	else {
-		if (mode == SPHERE) {
-			glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, SPHERE_LAYERS * NUM_POINTS);
-			glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
+		// Draw the circle as a line loop
+		if (mode == LINES) {
+			glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
+			glDrawArrays(GL_POINTS, 0, NUM_POINTS);
+		}
+		else if (mode == CIRCLE) {
+			glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
+			glDrawArrays(GL_POINTS, 0, NUM_POINTS);
+		}
+		else if (mode == CIRCLE_FLAT) {
+			glDrawArrays(GL_TRIANGLES, 0, NUM_POINTS * 3);
 		}
 		else {
-			glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
+			if (mode == SPHERE) {
+				glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, SPHERE_LAYERS * NUM_POINTS);
+				glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
+			}
+			else {
+				glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
+			}
+			cur += 0.01;
+			set_camera(sin(cur), cos(cur), 4.0f, 0.0f);
 		}
-		cur += 0.01;
-		set_camera(sin(cur), cos(cur), 4.0f, 0.0f);
+
+		// Unbind VAO and shader
+		glBindVertexArray(0);
+		glUseProgram(0);
 	}
 
-	// Unbind VAO and shader
-	glBindVertexArray(0);
-	glUseProgram(0);
+	
 
 	if (POST_PROC) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -864,6 +882,12 @@ int main() {
 	{
 		cv::ogl::ocl::initializeContextFromGL();
 	}
+
+	if (LoadFontRendering())
+	{
+		return -1;
+	}
+	
 
 	if (!Initialize()) {
 		printf("Scene initialization failed.\n");
