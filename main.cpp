@@ -32,6 +32,15 @@
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <numeric>
+#include <algorithm>
+#include <string>
+#include <iostream>
+#include <filesystem>
+#include "colors.h"
+#include <chrono>
+
+using namespace std::chrono;
+namespace fs = std::filesystem;
 
 #define VERT_LENGTH 4 // x,y,z,volume
 
@@ -64,10 +73,11 @@ float freqs[FRAMES];
 
 float red_rawdata[NUM_POINTS];
 float red_freqs[NUM_POINTS];
-float last_freqs[NUM_POINTS];
 
 double lastTime = glfwGetTime();
 int nbFrames = 0;
+
+int current_file_index = 0;
 
 int zx = 38;
 int zy = 21;
@@ -75,18 +85,26 @@ int dilation_size = 1;
 int erosion_size = 1;
 float angle = 0.4f;
 float sensitivity = 0.1;
-float lineWidth = 30.0;
+float zoom_sensitivity = 0.1;
+float lineWidth = 10.0;
 
 bool background_enabled = true;
+bool remap_enabled = false;
+bool reactive_zoom_enabled = false;
+int color_mode = 0;
+bool dynamic_color = false;
+float cur = 0.0;
 
-void Render();
+cv::Mat image = cv::Mat(screen_height, screen_width, CV_8UC4);
+GLfloat color[4] = { 1.0, 0.0, 0.0, 1.0 };
+
 enum VisMode { LINES, CIRCLE, CIRCLE_FLAT, SPHERE, SPHERE_SPIRAL };
 VisMode mode = CIRCLE;
 
 cv::UMat effect1(cv::UMat img) {
-	float f = (red_freqs[0] * 0.4);
+	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
 	cv::blur(img, img, cv::Size(10, 10));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[1] * 0.001, 0.0, img);
 	cv::UMat rot = cv::UMat(screen_height, screen_width, CV_8UC4);
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	cv::Mat matRotation = cv::getRotationMatrix2D(center, angle * f, 1.0);
@@ -115,9 +133,9 @@ cv::UMat effect2(cv::UMat img) {
 }
 
 cv::UMat effect3(cv::UMat img) {
-	float f = (red_freqs[0] * 0.4);
+	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
 	cv::blur(img, img, cv::Size(10, 10));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[1] * 0.001, 0.0, img);
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	//cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
 	//cv::warpAffine(img, img, matRotation, img.size());
@@ -178,6 +196,51 @@ cv::UMat effect6(cv::UMat img) {
 cv::UMat(*effect)(cv::UMat) = effect1;
 cv::UMat(*effects[NUM_EFFECTS])(cv::UMat) = { effect1, effect2, effect3, effect4, effect5, effect6 };
 
+void load_background() {
+	std::string path = SHADER_PATH;
+	std::string new_file;
+	int cur_idx = 0;
+	for (const auto& entry : fs::directory_iterator(path)) {
+		if (entry.path().filename().string().ends_with("png") || entry.path().filename().string().ends_with("jpg"))
+		{
+			if (cur_idx == current_file_index)
+			{
+				new_file = entry.path().string();
+			}
+			
+			cur_idx += 1;
+		}
+	}
+	if (!new_file.empty()) {
+		cv::Mat black = cv::Mat(cv::Size(screen_width, screen_height), CV_8UC4, cv::Scalar(0, 0, 0, 0));
+		cv::Mat image = cv::imread(new_file, cv::IMREAD_COLOR);
+
+		/*
+		cv::putText(black, //target image
+		"Hello, OpenCV!", //text
+		cv::Point(10, black.rows / 2), //top-left position
+		cv::FONT_HERSHEY_DUPLEX,
+		1.0,
+		CV_RGB(118, 185, 0), //font color
+		2,
+		cv::LINE_AA);
+		*/
+
+		std::vector<cv::Mat>channels;
+		cv::split(image, channels);
+		cv::Mat alpha = cv::Mat::zeros(cv::Size(image.cols, image.rows), CV_8UC1);
+		channels.push_back(alpha);
+		cv::merge(channels, image);
+
+		cv::Rect roi(black.cols / 2.0 - (image.cols / 2.0), black.rows / 2.0 - (image.rows / 2.0), image.cols, image.rows);
+		cv::flip(image, image, 0);
+		image.copyTo(black(roi));
+
+		black.copyTo(background);
+	}
+	current_file_index += 1;
+	current_file_index %= cur_idx;
+}
 
 int record(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
 	double streamTime, RtAudioStreamStatus status, void* userData) {
@@ -197,6 +260,8 @@ int record(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
 	kiss_fft(cfg, in, out);
 	for (int i = 0; i < FRAMES; i++) {
 		freqs[i] = sqrt(out[i].r * out[i].r + out[i].i * out[i].i);
+		//freqs[i] = (log10(freqs[i] + 0.1) + 1.0) * 2.0;
+		freqs[i] *= log10(((float)i/FRAMES) * 10 + 1.01);
 	}
 
 	int sample_group = FRAMES / NUM_POINTS;
@@ -208,16 +273,10 @@ int record(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
 			red_rawdata[i] += rawdata[i * sample_group + j];
 		}
 		for (int j = 0; j < fft_group; j++) {
-			red_freqs[i] += freqs[i * fft_group + j + 5];
-		}
-		red_freqs[i] += last_freqs[i];
-		red_freqs[i] /= 2.0;
-		red_freqs[i] *= ((float)i / NUM_POINTS) + 0.2;
+			red_freqs[i] += freqs[i * fft_group + j];
+		}		
 	}
 
-	for (int i = 0; i < NUM_POINTS; i++) {
-		last_freqs[i] = red_freqs[i];
-	}
 	// Do something with the data in the "inputBuffer" buffer.
 	return 0;
 }
@@ -259,9 +318,9 @@ static void set_camera(float cam_x, float cam_y, float cam_z, float target_z) {
 	GLint uniTrans = glGetUniformLocation(program, "model");
 	glUniformMatrix4fv(uniTrans, 1, GL_FALSE, glm::value_ptr(trans));
 
-	glm::mat4 view =
-		glm::lookAt(glm::vec3(cam_x, cam_y, cam_z),
-			glm::vec3(0.0f, 0.0f, target_z), glm::vec3(0.0f, 0.0f, 1.0f));
+	glm::mat4 view = glm::lookAt(glm::vec3(cam_x, cam_y, cam_z),
+	glm::vec3(0.0f, 0.0f, target_z),
+	glm::vec3(0.0f, 0.0f, 1.0f));
 	GLint uniView = glGetUniformLocation(program, "view");
 	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
@@ -294,6 +353,19 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 	else if (key == GLFW_KEY_F) {
 		set_camera(0.0f, -2.5f, 2.5f, 0.2f);
 	}
+	else if (key == GLFW_KEY_R && action == GLFW_PRESS) {
+		set_camera(0.0f, -0.1f, 6.0f, 0.0f);
+	}
+	else if (key == GLFW_KEY_T && action == GLFW_PRESS) {
+		remap_enabled = !remap_enabled;
+	}
+	else if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
+		reactive_zoom_enabled = !reactive_zoom_enabled;
+	}
+	else if (key == GLFW_KEY_D && action == GLFW_PRESS) {
+		color_mode += 1;
+		color_mode %= 4;
+	}
 	else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9 && action == GLFW_PRESS) {
 		int index = (key - GLFW_KEY_0);
 		if (index < NUM_EFFECTS) {
@@ -301,8 +373,32 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 			printf("Using effect %d\n", index);
 		}
 	}
-	else if (key >= GLFW_KEY_B && action == GLFW_PRESS)  {
+	else if (key == GLFW_KEY_B && action == GLFW_PRESS)  {
 		background_enabled = !background_enabled;
+	}
+	else if (key == GLFW_KEY_KP_DECIMAL && action == GLFW_PRESS) {
+		load_background();
+	}
+	else if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
+		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+		glfwSetWindowMonitor(window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, mode->refreshRate);
+	}
+	else if (key == GLFW_KEY_KP_ADD && action == GLFW_PRESS) {
+		zoom_sensitivity += 0.05;
+		zoom_sensitivity = std::clamp(zoom_sensitivity, 0.0f, 1.0f);
+	}
+	else if (key == GLFW_KEY_KP_SUBTRACT && action == GLFW_PRESS) {
+		zoom_sensitivity -= 0.05;
+		zoom_sensitivity = std::clamp(zoom_sensitivity, 0.0f, 1.0f);
+	}
+	else if (key == GLFW_KEY_KP_6 && action == GLFW_PRESS) {
+		lineWidth += 2.0;
+		lineWidth = std::clamp(lineWidth, 2.0f, 10.0f);
+	}
+	else if (key == GLFW_KEY_KP_9 && action == GLFW_PRESS) {
+		lineWidth -= 2.0;
+		lineWidth = std::clamp(lineWidth, 2.0f, 10.0f);
 	}
 
 }
@@ -404,27 +500,20 @@ bool loadShaders(GLuint* program, std::vector<std::tuple<GLenum, std::string, st
 
 bool Initialize() {
 	getdevices();
-	cv::Mat black = cv::Mat(cv::Size(screen_width, screen_height), CV_8UC4, cv::Scalar(0, 0, 0, 0));
-	cv::Mat image = cv::imread("../../../apple.png", cv::IMREAD_COLOR);
+	load_background();
 	
-	std::vector<cv::Mat>channels;
-	cv::split(image, channels);
-	cv::Mat alpha = cv::Mat::zeros(cv::Size(image.cols, image.rows), CV_8UC1);
-	channels.push_back(alpha);
-	cv::merge(channels, image);
-	
-	cv::Rect roi(black.cols / 2.0 - (image.cols / 2.0), black.rows / 2.0 - (image.rows / 2.0), image.cols, image.rows);
-	cv::flip(image, image, 0);
-	image.copyTo(black(roi));
-	cv::imwrite("../../../test.png", black);
-
-	black.copyTo(background);
 	cv::Mat remat = cv::Mat(cv::Size(screen_width, screen_height), CV_16SC2, cv::Scalar(0, 0));
 	for (int i = 0; i < remat.cols; i++)
 	{
 		for (int j = 0; j < remat.rows; j++)
 		{
-			remat.at<cv::Vec2s>(j, i) = cv::Vec2s(i * 2.0, j * 2.0);
+			int rx = i - sin(((float)i / (float)remat.cols) * M_2_PI) * 500.0;
+			//int rx = i + abs(1.0 - abs(abs(((float)i * 4.0f / (float)remat.cols) - 2.0f)) - 1.0) * 500;
+			//int rx = i;
+			int ry = j;
+			remat.at<cv::Vec2s>(j, i) = cv::Vec2s(rx, ry);
+			// remat.at<cv::Vec2s>(j, i) = cv::Vec2s(i % 500, j % 500);
+			// IDEA use remap nois for glitch effect!
 		}
 	}
 	remat.copyTo(remapmat);
@@ -467,7 +556,7 @@ bool Initialize() {
 	}
 
 	printf("Created program \n");
-	set_camera(0.0f, -0.1f, 5.0f, 0.0f);
+	set_camera(0.0f, -0.01f, 6.0f, 0.0f);
 
 
 	if (POST_PROC) {
@@ -530,21 +619,21 @@ bool Initialize() {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
-	glEnable(GL_PROGRAM_POINT_SIZE);
-	glLineWidth(lineWidth);
+	glEnable(GL_POINT_SMOOTH);
+	
 
 	printf("Init finished \n");
 	return true;
 }
 
-float cur = 0.0;
-
-cv::Mat image = cv::Mat(screen_height, screen_width, CV_8UC4);
 
 
+int color_cycle = 0;
+milliseconds last_ms;
 
 void Render() {
-
+	glLineWidth(lineWidth);
+	glPointSize(10.0);
 	if (POST_PROC) {
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	}
@@ -588,12 +677,10 @@ void Render() {
 
 			float c[5] = { 0.0, 0.0, 0.0, 0.0, (float)i / NUM_POINTS };
 			vertices.insert(vertices.end(), std::begin(c), std::end(c));
-			float a[5] = { radius * r * cosf(theta1), radius * r * sinf(theta1), 0.0,
-						  red_freqs[i] * sensitivity, (float)i / NUM_POINTS };
-			vertices.insert(vertices.end(), std::begin(a), std::end(a));
-			float b[5] = { radius * r * sinf(theta2), radius * r * sinf(theta2), 0.0,
-						  0.0, (float)i / NUM_POINTS };
+			float b[5] = { radius * r * sinf(theta2), radius * r * sinf(theta2), 0.0, 0.0, (float)i / NUM_POINTS };
 			vertices.insert(vertices.end(), std::begin(b), std::end(b));
+			float a[5] = { radius * r * cosf(theta1), radius * r * sinf(theta1), 0.0, red_freqs[i] * sensitivity, (float)i / NUM_POINTS };
+			vertices.insert(vertices.end(), std::begin(a), std::end(a));
 		}
 	}
 	else if (mode == SPHERE) {
@@ -626,12 +713,54 @@ void Render() {
 		}
 	}
 
+	
+
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+	//color[0] = red_freqs[0] * 0.1;
+	//color[1] = red_freqs[NUM_POINTS / 2] * 0.1;
+	//color[2] = red_freqs[NUM_POINTS - 1] * 0.1;
+
+	if (color_mode == 2)
+	{
+		int freq_index = std::distance(std::begin(red_freqs), std::max_element(std::begin(red_freqs), std::end(red_freqs)));
+		rgb rgbcolor = hsv2rgb(hsv{ ((float)freq_index / NUM_POINTS) * 360.0, 1.0 - ((float)freq_index / NUM_POINTS) , 1.0  });
+		color[0] = rgbcolor.r;
+		color[1] = rgbcolor.g;
+		color[2] = rgbcolor.b;
+	}
+	else if (color_mode == 3)
+	{
+		milliseconds current_ms = duration_cast<milliseconds>(
+			system_clock::now().time_since_epoch()
+		);
+		if (red_freqs[0] > 3.0 && (current_ms.count() - last_ms.count()) > 100) {
+			if (color_cycle == 0)
+			{
+				color[0] = 1.0;
+				color[1] = 0.0;
+				color[2] = 0.0;
+			} else {
+				color[0] = 0.0;
+				color[1] = 1.0;
+				color[2] = 0.0;
+			}
+
+			color_cycle += 1;
+			color_cycle %= 2;
+			last_ms = current_ms;
+		}
+
+	}
+
+
+
 	// Use the shader program
 	glUseProgram(program);
+	glUniform1i(glGetUniformLocation(program, "color_mode"), color_mode);
+	glUniform4fv(glGetUniformLocation(program, "color"), 1, color);
 
 	// Bind vertex array object (VAO)
 	glBindVertexArray(vao);
@@ -646,7 +775,7 @@ void Render() {
 		glDrawArrays(GL_POINTS, 0, NUM_POINTS);
 	}
 	else if (mode == CIRCLE_FLAT) {
-		glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS * 3);
+		glDrawArrays(GL_TRIANGLES, 0, NUM_POINTS * 3);
 	}
 	else {
 		if (mode == SPHERE) {
@@ -667,7 +796,7 @@ void Render() {
 	if (POST_PROC) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		cv::UMat u1, u2, u3;
+		cv::UMat u1, u2, u3, u4;
 		cv::ogl::convertFromGLTexture2D(texture, u1);
 		cv::ogl::convertFromGLTexture2D(texture2, u2);
 
@@ -678,11 +807,18 @@ void Render() {
 			cv::add(u1, background, u3);
 		}
 		else {
-			u3 = u1;
+			//u3 = u1; <- Crazy effect
+			u1.copyTo(u3);
 		}
-		cv::remap(u3, u3, remapmat, cv::Mat(), cv::INTER_NEAREST);
+		if (remap_enabled) {
+			cv::remap(u3, u4, remapmat, cv::Mat(), cv::INTER_NEAREST);
+		}
+		else {
+			u3.copyTo(u4);
+		}
+		
 
-		cv::ogl::convertToGLTexture2D(u3, texture);
+		cv::ogl::convertToGLTexture2D(u4, texture);
 		u1.copyTo(u2);
 		cv::ogl::convertToGLTexture2D(u2, texture2);
 

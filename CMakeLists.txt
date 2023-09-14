@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(triangle)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 IF (!WIN32)
@@ -26,7 +26,7 @@ list(REMOVE_ITEM importTargetsAfter ${importTargets})
 message("${importTargetsAfter}")
 
 add_compile_definitions(_USE_MATH_DEFINES)
-add_executable(triangle main.cpp)
+add_executable(triangle main.cpp "colors.h")
 
 include_directories( ${OpenCV_INCLUDE_DIRS} )
 IF (WIN32)
