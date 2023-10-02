@@ -16,7 +16,7 @@
 #include <fstream>
 #ifdef _WIN32
 #include <kiss_fft.h>
-#elif
+#else
 #include <kissfft/kiss_fft.h>
 #endif
 #include <math.h>
@@ -38,12 +38,11 @@
 #include <filesystem>
 #include "colors.h"
 #include <chrono>
-#define TRACY_ENABLE
-#include <tracy/Tracy.hpp>
+#include <Tracy.hpp>
+#include <TracyOpenGL.hpp>
+#include <TracyOpenCL.hpp>
 #include "font_rendering.h"
 #include "beatdetektor/cpp/BeatDetektor.h"
-
-
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -53,7 +52,7 @@ namespace fs = std::filesystem;
 #define SPHERE_LAYERS 8
 #define FRAMES 1024
 #define NUM_POINTS 64
-#define SHADER_PATH "../../../"
+#define SHADER_PATH "../"
 
 GLFWwindow* window;
 GLuint program, font_program;
@@ -326,7 +325,7 @@ void getdevices() {
 #ifdef _WIN32
 	std::vector<unsigned int> ids(adc.getDeviceCount());
 	std::iota(ids.begin(), ids.end(), 0);
-#elif
+#else
 	std::vector<unsigned int> ids = adc.getDeviceIds();
 #endif
 	if (ids.size() == 0) {
@@ -462,13 +461,6 @@ static void resize(GLFWwindow* window, int width, int height) {
 	if (width == 0 || height == 0) {
 		return;
 	}
-	//width /= 2;
-	//height /= 2;
-
-	screen_width = width;
-	screen_height = height;
-
-	Initialize();
 
 	printf("Resized %d, %d\n", width, height);
 	//glViewport(0, 0, width, height);
@@ -594,7 +586,7 @@ bool Initialize() {
 	{
 		std::cout << '\n' << e.getMessage() << '\n' << std::endl;
 	}
-#elif
+#else
 	if (adc.openStream(NULL, &parameters, RTAUDIO_FLOAT32, sampleRate, &bufferFrames, &record)) {
 		std::cout << '\n' << adc.getErrorText() << '\n' << std::endl;
 		exit(0); // problem with device settings
@@ -763,6 +755,9 @@ int color_cycle = 0;
 milliseconds last_ms;
 
 void Render() {
+	ZoneScoped;
+	TracyGpuZone("Render");
+	FrameMark;
 	glLineWidth(lineWidth);
 	glPointSize(10.0);
 	if (post_processing_enabled) {
@@ -912,11 +907,13 @@ int main() {
 		printf("Failed to create window.\n");
 		return 1;
 	}
+	
 	glfwMakeContextCurrent(window);
 	//glfwSwapInterval(1); // Disable vsync
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetFramebufferSizeCallback(window, resize);
 	glewInit();
+	TracyGpuContext;
 
 	printf("GL_VENDOR: %s\n", glGetString(GL_VENDOR));
 	printf("GL_VERSION: %s\n", glGetString(GL_VERSION));
@@ -942,6 +939,7 @@ int main() {
 		Render();
 		glFinish();
 		glfwSwapBuffers(window);
+		TracyGpuCollect;
 		glfwPollEvents();
 	}
 
