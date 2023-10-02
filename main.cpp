@@ -38,7 +38,12 @@
 #include <filesystem>
 #include "colors.h"
 #include <chrono>
+#define TRACY_ENABLE
+#include <tracy/Tracy.hpp>
 #include "font_rendering.h"
+#include "beatdetektor/cpp/BeatDetektor.h"
+
+
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -48,7 +53,6 @@ namespace fs = std::filesystem;
 #define SPHERE_LAYERS 8
 #define FRAMES 1024
 #define NUM_POINTS 64
-#define POST_PROC true
 #define SHADER_PATH "../../../"
 
 GLFWwindow* window;
@@ -62,12 +66,12 @@ GLfloat circleVertices[NUM_POINTS * VERT_LENGTH * SPHERE_LAYERS];
 GLuint fbo, fbo_texture, fbo_texture2, rbo_depth;
 
 cv::ogl::Texture2D texture, texture2;
-cv::UMat background, remapmat;
+cv::UMat background;
 
 kiss_fft_cfg cfg;
 
-const unsigned int screen_width = 3840;
-const unsigned int screen_height = 2160;
+unsigned int screen_width = 3840;
+unsigned int screen_height = 2160;
 
 float rawdata[FRAMES];
 float freqs[FRAMES];
@@ -79,6 +83,7 @@ double lastTime = glfwGetTime();
 int nbFrames = 0;
 
 int current_file_index = 0;
+int current_font_index = 0;
 
 int zx = 38;
 int zy = 21;
@@ -90,17 +95,22 @@ float zoom_sensitivity = 0.1;
 float lineWidth = 10.0;
 
 bool background_enabled = true;
-bool remap_enabled = false;
+bool post_processing_enabled = true;
 bool reactive_zoom_enabled = false;
 int color_mode = 0;
 bool dynamic_color = false;
 float cur = 0.0;
 
-cv::Mat image = cv::Mat(screen_height, screen_width, CV_8UC4);
+milliseconds start;
+
+cv::Mat image;
 GLfloat color[4] = { 1.0, 0.0, 0.0, 1.0 };
 
 enum VisMode { LINES, CIRCLE, CIRCLE_FLAT, SPHERE, SPHERE_SPIRAL, TEXT };
 VisMode mode = CIRCLE;
+
+BeatDetektor *bd;
+
 
 cv::UMat effect1(cv::UMat img) {
 	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
@@ -150,13 +160,14 @@ cv::UMat effect3(cv::UMat img) {
 }
 
 cv::UMat effect4(cv::UMat img) {
+	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
 	cv::blur(img, img, cv::Size(10, 10));
 	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	cv::UMat rot = cv::UMat(screen_height, screen_width, CV_8UC4);
 	cv::Mat trans_mat = (cv::Mat_<double>(2, 3) << 1, 0, 0, 0, 1, -20);
 	cv::warpAffine(img, rot, trans_mat, img.size());
-	cv::UMat test2 = rot(cv::Rect(zx, zy, screen_width - 2 * zx, screen_height - 2 * zy));
+	cv::UMat test2 = rot(cv::Rect(zx* f, zy* f, screen_width - 2 * zx* f, screen_height - 2 * zy * f));
 	cv::Mat element = getStructuringElement(cv::MORPH_RECT, cv::Size(2 * dilation_size + 1, 2 * dilation_size + 1), cv::Point(dilation_size, dilation_size));
 	cv::dilate(test2, test2, element);
 	cv::UMat image2 = cv::UMat(screen_height, screen_width, CV_8UC4);
@@ -179,6 +190,15 @@ cv::UMat effect5(cv::UMat img) {
 }
 
 cv::UMat effect6(cv::UMat img) {
+	cv::blur(img, img, cv::Size(20, 20));
+	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::UMat test2 = img(cv::Rect(zx, zy, screen_width - 2 * zx, screen_height - 2 * zy));
+	cv::UMat image2 = cv::UMat(screen_height, screen_width, CV_8UC4);
+	cv::resize(test2, image2, cv::Size(screen_width, screen_height));
+	return image2;
+}
+
+cv::UMat effect7(cv::UMat img) {
 	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	//cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
@@ -193,12 +213,34 @@ cv::UMat effect6(cv::UMat img) {
 	return image2;
 }
 
-#define NUM_EFFECTS 6
+#define NUM_EFFECTS 7
 cv::UMat(*effect)(cv::UMat) = effect1;
-cv::UMat(*effects[NUM_EFFECTS])(cv::UMat) = { effect1, effect2, effect3, effect4, effect5, effect6 };
+cv::UMat(*effects[NUM_EFFECTS])(cv::UMat) = { effect1, effect2, effect3, effect4, effect5, effect6, effect7 };
+
+void load_font() {
+	std::string path = SHADER_PATH + std::string("fonts/");
+	std::string new_file;
+	int cur_idx = 0;
+	for (const auto& entry : fs::directory_iterator(path)) {
+		if (entry.path().filename().string().ends_with("ttf") || entry.path().filename().string().ends_with("otf"))
+		{
+			if (cur_idx == current_font_index)
+			{
+				new_file = entry.path().string();
+			}
+			
+			cur_idx += 1;
+		}
+	}
+	if (!new_file.empty()) {
+		LoadFontRendering(new_file);
+	}
+	current_font_index += 1;
+	current_font_index %= cur_idx;
+}
 
 void load_background() {
-	std::string path = SHADER_PATH;
+	std::string path = SHADER_PATH + std::string("logos/");
 	std::string new_file;
 	int cur_idx = 0;
 	for (const auto& entry : fs::directory_iterator(path)) {
@@ -215,17 +257,6 @@ void load_background() {
 	if (!new_file.empty()) {
 		cv::Mat black = cv::Mat(cv::Size(screen_width, screen_height), CV_8UC4, cv::Scalar(0, 0, 0, 0));
 		cv::Mat image = cv::imread(new_file, cv::IMREAD_COLOR);
-
-		/*
-		cv::putText(black, //target image
-		"Hello, OpenCV!", //text
-		cv::Point(10, black.rows / 2), //top-left position
-		cv::FONT_HERSHEY_DUPLEX,
-		1.0,
-		CV_RGB(118, 185, 0), //font color
-		2,
-		cv::LINE_AA);
-		*/
 
 		std::vector<cv::Mat>channels;
 		cv::split(image, channels);
@@ -264,6 +295,14 @@ int record(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
 		//freqs[i] = (log10(freqs[i] + 0.1) + 1.0) * 2.0;
 		freqs[i] *= log10(((float)i/FRAMES) * 10 + 1.01);
 	}
+
+	std::vector<float> fftdata;
+	for (int i = 0; i < FRAMES; i++) {
+		fftdata.push_back(freqs[i]);
+	}
+
+	//printf("%f\n", streamTime);
+	//bd.process(streamTime, fftdata);
 
 	int sample_group = FRAMES / NUM_POINTS;
 	int fft_group = (FRAMES / 3) / NUM_POINTS;
@@ -330,7 +369,7 @@ static void set_camera(float cam_x, float cam_y, float cam_z, float target_z) {
 		GLint uniView = glGetUniformLocation(programs[i], "view");
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-		glm::mat4 proj = glm::perspective(glm::radians(45.0f), 3840.0f / 2160.0f, 0.1f, 40.0f);
+		glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)screen_width / (float)screen_height, 0.1f, 40.0f);
 		GLint uniProj = glGetUniformLocation(programs[i], "proj");
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 	}
@@ -359,14 +398,17 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 	else if (key == GLFW_KEY_T && action == GLFW_PRESS) {
 		mode = VisMode::TEXT;
 	}
+	else if (key == GLFW_KEY_I && action == GLFW_PRESS) {
+		load_font();
+	}
+	else if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+		post_processing_enabled = !post_processing_enabled;
+	}
 	else if (key == GLFW_KEY_F) {
 		set_camera(0.0f, -2.5f, 2.5f, 0.2f);
 	}
 	else if (key == GLFW_KEY_R && action == GLFW_PRESS) {
 		set_camera(0.0f, -0.1f, 6.0f, 0.0f);
-	}
-	else if (key == GLFW_KEY_J && action == GLFW_PRESS) {
-		remap_enabled = !remap_enabled;
 	}
 	else if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
 		reactive_zoom_enabled = !reactive_zoom_enabled;
@@ -376,7 +418,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 		color_mode %= 4;
 	}
 	else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9 && action == GLFW_PRESS) {
+		
 		int index = (key - GLFW_KEY_0);
+		printf("Usietf %d\n", index);
 		if (index < NUM_EFFECTS) {
 			effect = effects[index];
 			printf("Using effect %d\n", index);
@@ -391,7 +435,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 	else if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
 		GLFWmonitor* monitor = glfwGetPrimaryMonitor();
 		const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-		glfwSetWindowMonitor(window, glfwGetPrimaryMonitor(), 0, 0, mode->width, mode->height, mode->refreshRate);
+		glfwSetWindowMonitor(window, glfwGetPrimaryMonitor(), 0, 0, screen_width, screen_height, mode->refreshRate);
 	}
 	else if (key == GLFW_KEY_KP_ADD && action == GLFW_PRESS) {
 		zoom_sensitivity += 0.05;
@@ -412,11 +456,23 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 
 }
 
+bool Initialize();
+
 static void resize(GLFWwindow* window, int width, int height) {
 	if (width == 0 || height == 0) {
 		return;
 	}
-	glViewport(0, 0, width, height);
+	//width /= 2;
+	//height /= 2;
+
+	screen_width = width;
+	screen_height = height;
+
+	Initialize();
+
+	printf("Resized %d, %d\n", width, height);
+	//glViewport(0, 0, width, height);
+
 	GLuint programs[2] = { program, font_program };
 	for (int i = 0; i < 2; i++) {
 		glUseProgram(programs[i]);
@@ -428,16 +484,14 @@ static void resize(GLFWwindow* window, int width, int height) {
 		glUniformMatrix4fv(glGetUniformLocation(programs[i], "proj"), 1, GL_FALSE, glm::value_ptr(proj));
 	}
 
-	if (POST_PROC) {
+	if (post_processing_enabled) {
 		glBindTexture(GL_TEXTURE_2D, fbo_texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0,
-			GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glUseProgram(0);
 
 		glBindRenderbuffer(GL_RENDERBUFFER, rbo_depth);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, screen_width,
-			screen_height);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, screen_width, screen_height);
 		glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	}
 }
@@ -512,22 +566,13 @@ bool loadShaders(GLuint* program, std::vector<std::tuple<GLenum, std::string, st
 bool Initialize() {
 	getdevices();
 	load_background();
+
+	image = cv::Mat(screen_height, screen_width, CV_8UC4);
+	bd = new BeatDetektor();
 	
-	cv::Mat remat = cv::Mat(cv::Size(screen_width, screen_height), CV_16SC2, cv::Scalar(0, 0));
-	for (int i = 0; i < remat.cols; i++)
-	{
-		for (int j = 0; j < remat.rows; j++)
-		{
-			int rx = i - sin(((float)i / (float)remat.cols) * M_2_PI) * 500.0;
-			//int rx = i + abs(1.0 - abs(abs(((float)i * 4.0f / (float)remat.cols) - 2.0f)) - 1.0) * 500;
-			//int rx = i;
-			int ry = j;
-			remat.at<cv::Vec2s>(j, i) = cv::Vec2s(rx, ry);
-			// remat.at<cv::Vec2s>(j, i) = cv::Vec2s(i % 500, j % 500);
-			// IDEA use remap nois for glitch effect!
-		}
-	}
-	remat.copyTo(remapmat);
+	start = duration_cast< milliseconds >(
+		system_clock::now().time_since_epoch()
+	);
 
 	RtAudio::StreamParameters parameters;
 	parameters.deviceId = adc.getDefaultInputDevice();
@@ -573,7 +618,7 @@ bool Initialize() {
 	set_camera(0.0f, -0.01f, 6.0f, 0.0f);
 
 
-	if (POST_PROC) {
+	if (post_processing_enabled) {
 		glActiveTexture(GL_TEXTURE0);
 		glGenTextures(1, &fbo_texture);
 		glBindTexture(GL_TEXTURE_2D, fbo_texture);
@@ -720,7 +765,7 @@ milliseconds last_ms;
 void Render() {
 	glLineWidth(lineWidth);
 	glPointSize(10.0);
-	if (POST_PROC) {
+	if (post_processing_enabled) {
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	}
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -765,10 +810,17 @@ void Render() {
 
 	}
 
+	milliseconds ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
+	float time =  (double)((double)ms.count() - (double)start.count()) / 1000.0f;
+
 	if (mode == TEXT)
 	{
+		glUseProgram(font_program);
+		glUniform1f(glGetUniformLocation(font_program, "time"), (float)time);
+		glUniform1f(glGetUniformLocation(font_program, "volume"), (float)red_freqs[0]);
+		glUseProgram(0);
 		glEnable(GL_BLEND);
-		RenderText(font_program, "NeverSayDie", -2.0f, 0.0f, 0.015f, glm::vec3(color[0], color[1], color[2]));
+		RenderText(font_program, "HI-LO", -2.0f, -0.5f, 0.005f, glm::vec3(color[0], color[1], color[2]));
 		glDisable(GL_BLEND);
 	} else {
 		CreateVBO();
@@ -811,7 +863,7 @@ void Render() {
 
 	
 
-	if (POST_PROC) {
+	if (post_processing_enabled) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		cv::UMat u1, u2, u3, u4;
@@ -821,22 +873,14 @@ void Render() {
 		cv::add(u1, effect(u2), u1);
 
 		//background(cv::Rect(150, 150, 50, 50)).copyTo(background(cv::Rect(0, 0, 50, 50)));
-		if (background_enabled) {
+		if (background_enabled && mode != TEXT) {
 			cv::add(u1, background, u3);
 		}
 		else {
-			//u3 = u1; <- Crazy effect
-			u1.copyTo(u3);
+			u3 = u1;
 		}
-		if (remap_enabled) {
-			cv::remap(u3, u4, remapmat, cv::Mat(), cv::INTER_NEAREST);
-		}
-		else {
-			u3.copyTo(u4);
-		}
-		
 
-		cv::ogl::convertToGLTexture2D(u4, texture);
+		cv::ogl::convertToGLTexture2D(u3, texture);
 		u1.copyTo(u2);
 		cv::ogl::convertToGLTexture2D(u2, texture2);
 
@@ -857,7 +901,6 @@ void Render() {
 }
 
 int main() {
-
 	if (!glfwInit())
 		exit(EXIT_FAILURE);
 
@@ -870,6 +913,7 @@ int main() {
 		return 1;
 	}
 	glfwMakeContextCurrent(window);
+	//glfwSwapInterval(1); // Disable vsync
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetFramebufferSizeCallback(window, resize);
 	glewInit();
@@ -883,7 +927,7 @@ int main() {
 		cv::ogl::ocl::initializeContextFromGL();
 	}
 
-	if (LoadFontRendering())
+	if (LoadFontRendering(SHADER_PATH + std::string("fonts/arial.ttf")))
 	{
 		return -1;
 	}
@@ -896,6 +940,7 @@ int main() {
 
 	while (!glfwWindowShouldClose(window)) {
 		Render();
+		glFinish();
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}

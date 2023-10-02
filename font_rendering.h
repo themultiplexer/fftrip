@@ -15,7 +15,8 @@ struct Character {
 std::map<char, Character> Characters;
 unsigned int VAO, VBO;
 
-int LoadFontRendering() {
+int LoadFontRendering(std::string font_path) {
+    Characters.clear();
     FT_Library ft;
     if (FT_Init_FreeType(&ft))
     {
@@ -24,7 +25,7 @@ int LoadFontRendering() {
     }
 
     FT_Face face;
-    if (FT_New_Face(ft, "../../../arial.ttf", 0, &face))
+    if (FT_New_Face(ft, font_path.c_str(), 0, &face))
     {
         std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
         return -1;
@@ -32,7 +33,8 @@ int LoadFontRendering() {
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
 
-    FT_Set_Pixel_Sizes(face, 0, 48);
+    FT_Set_Pixel_Sizes(face, 0, 256);
+    FT_GlyphSlot slot = face->glyph;
 
     for (unsigned char c = 0; c < 128; c++)
     {
@@ -43,6 +45,9 @@ int LoadFontRendering() {
             std::cout << "ERROR::FREETYTPE: Failed to load Glyph " << fterr << std::endl;
             continue;
         }
+
+        FT_Render_Glyph(slot, FT_RENDER_MODE_SDF);
+
         // generate texture
         unsigned int font_texture;
         glGenTextures(1, &font_texture);
@@ -97,14 +102,24 @@ void RenderText(GLuint shader, std::string text, float x, float y, float scale, 
 {
     // activate corresponding render state	
     glUseProgram(shader);
-    glUniform3f(glGetUniformLocation(shader, "textColor"), color.x, color.y, color.z);
+    //glUniform3f(glGetUniformLocation(shader, "textColor"), color.x, color.y, color.z);
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(VAO);
 
     // iterate through all characters
     std::string::const_iterator c;
+    float width = 0.0f;
     for (c = text.begin(); c != text.end(); c++)
     {
+        Character ch = Characters[*c];
+        width += ch.Size.x * scale + (ch.Advance >> 6) * scale;
+    }
+
+    x = -width/6.0f;
+
+    for (c = text.begin(); c != text.end(); c++)
+    {
+        int ch_index = c - text.begin();
         Character ch = Characters[*c];
 
         float xpos = x + ch.Bearing.x * scale;
@@ -122,6 +137,8 @@ void RenderText(GLuint shader, std::string text, float x, float y, float scale, 
             { xpos + w, ypos,       1.0f, 1.0f },
             { xpos + w, ypos + h,   1.0f, 0.0f }
         };
+
+        glUniform3f(glGetUniformLocation(shader, "textColor"), (float)ch_index / (float)text.length(), 1.0f - (float)ch_index / (float)text.length(), color.z);
         // render glyph texture over quad
         glBindTexture(GL_TEXTURE_2D, ch.TextureID);
         // update content of VBO memory
