@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <map>
 #include <freetype/freetype.h>
-
+#include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
 struct Character {
@@ -15,6 +15,7 @@ struct Character {
 
 std::map<char, Character> Characters;
 unsigned int VAO, VBO;
+bool firstword = true;
 
 int LoadFontRendering(std::string font_path) {
     Characters.clear();
@@ -103,13 +104,14 @@ void RenderText(GLuint shader, std::string text, float x, float y, float scale, 
 {
     // activate corresponding render state	
     glUseProgram(shader);
-    //glUniform3f(glGetUniformLocation(shader, "textColor"), color.x, color.y, color.z);
+    
     glActiveTexture(GL_TEXTURE0);
     glBindVertexArray(VAO);
 
     // iterate through all characters
     std::string::const_iterator c;
     float width = 0.0f;
+    glm::vec3 current_color = color;
     for (c = text.begin(); c != text.end(); c++)
     {
         Character ch = Characters[*c];
@@ -117,9 +119,13 @@ void RenderText(GLuint shader, std::string text, float x, float y, float scale, 
     }
 
     x = -width/6.0f;
-
     for (c = text.begin(); c != text.end(); c++)
     {
+        if (*c == ' ') {
+            current_color = glm::vec3(0.0, 1.0, 1.0);
+        }
+        glUniform3fv(glGetUniformLocation(shader, "textColor"), 1, glm::value_ptr(current_color));
+
         int ch_index = c - text.begin();
         Character ch = Characters[*c];
 
@@ -139,7 +145,7 @@ void RenderText(GLuint shader, std::string text, float x, float y, float scale, 
             { xpos + w, ypos + h,   1.0f, 0.0f }
         };
 
-        glUniform3f(glGetUniformLocation(shader, "textColor"), (float)ch_index / (float)text.length(), 1.0f - (float)ch_index / (float)text.length(), color.z);
+        //glUniform3f(glGetUniformLocation(shader, "textColor"), (float)ch_index / (float)text.length(), 1.0f - (float)ch_index / (float)text.length(), color.z);
         // render glyph texture over quad
         glBindTexture(GL_TEXTURE_2D, ch.TextureID);
         // update content of VBO memory

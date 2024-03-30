@@ -1,3 +1,4 @@
+#include "helpers.h"
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glext.h>
@@ -42,7 +43,7 @@
 #include <TracyOpenGL.hpp>
 #include <TracyOpenCL.hpp>
 #include "font_rendering.h"
-#include "beatdetektor/cpp/BeatDetektor.h"
+#include "3rdparty/beatdetektor/cpp/BeatDetektor.h"
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -55,8 +56,8 @@ namespace fs = std::filesystem;
 #define SHADER_PATH "../"
 
 GLFWwindow* window;
-GLuint program, font_program;
-GLuint vao, vbo;
+GLuint program, font_program, pixel_program;
+GLuint vao, vbo, vao2, vbo2;
 GLuint ssaoFramebufferID, ssaoDepthTextureID;
 float radius = 1.0f;
 RtAudio adc(RtAudio::Api::LINUX_PULSE);
@@ -74,8 +75,6 @@ unsigned int screen_height = 2160;
 
 float rawdata[FRAMES];
 float freqs[FRAMES];
-
-float red_rawdata[NUM_POINTS];
 float red_freqs[NUM_POINTS];
 
 double lastTime = glfwGetTime();
@@ -93,10 +92,11 @@ float sensitivity = 0.1;
 float zoom_sensitivity = 0.1;
 float lineWidth = 10.0;
 
-bool background_enabled = true;
+
 bool post_processing_enabled = true;
 bool reactive_zoom_enabled = false;
 int color_mode = 0;
+int background_mode = 0;
 bool dynamic_color = false;
 float cur = 0.0;
 
@@ -106,7 +106,16 @@ cv::Mat image;
 GLfloat color[4] = { 1.0, 0.0, 0.0, 1.0 };
 
 enum VisMode { LINES, CIRCLE, CIRCLE_FLAT, SPHERE, SPHERE_SPIRAL, TEXT };
+enum BackgroundMode { OFF, ON, BEAT };
 VisMode mode = CIRCLE;
+
+int color_cycle = 0;
+milliseconds last_ms;
+
+double lastBeat;
+bool beat = false;
+
+cv::UMat u1, u2, u3;
 
 BeatDetektor *bd;
 
@@ -115,7 +124,7 @@ cv::UMat effect1(cv::UMat img) {
 	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
 	cv::blur(img, img, cv::Size(10, 10));
 	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[1] * 0.001, 0.0, img);
-	cv::UMat rot = cv::UMat(screen_height, screen_width, CV_8UC4);
+	cv::UMat rot;
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	cv::Mat matRotation = cv::getRotationMatrix2D(center, angle * f, 1.0);
 	cv::warpAffine(img, rot, matRotation, img.size());
@@ -130,7 +139,7 @@ cv::UMat effect1(cv::UMat img) {
 cv::UMat effect2(cv::UMat img) {
 	cv::blur(img, img, cv::Size(10, 10));
 	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
-	cv::UMat rot = cv::UMat(screen_height, screen_width, CV_8UC4);
+	cv::UMat rot;
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	cv::Mat matRotation = cv::getRotationMatrix2D(center, angle, 1.0);
 	cv::warpAffine(img, rot, matRotation, img.size());
@@ -163,7 +172,7 @@ cv::UMat effect4(cv::UMat img) {
 	cv::blur(img, img, cv::Size(10, 10));
 	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
-	cv::UMat rot = cv::UMat(screen_height, screen_width, CV_8UC4);
+	cv::UMat rot;
 	cv::Mat trans_mat = (cv::Mat_<double>(2, 3) << 1, 0, 0, 0, 1, -20);
 	cv::warpAffine(img, rot, trans_mat, img.size());
 	cv::UMat test2 = rot(cv::Rect(zx* f, zy* f, screen_width - 2 * zx* f, screen_height - 2 * zy * f));
@@ -212,9 +221,47 @@ cv::UMat effect7(cv::UMat img) {
 	return image2;
 }
 
-#define NUM_EFFECTS 7
+cv::UMat effect8(cv::UMat img) {
+	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
+	cv::blur(img, img, cv::Size(20, 20));
+	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	auto image_rect = cv::Rect({}, img.size());
+	auto roi = cv::Rect(zx, zy, screen_width, screen_height + 2 * zy * f);
+	auto intersection = image_rect & roi;
+	auto inter_roi = intersection - roi.tl();
+	cv::Mat test2 = cv::Mat::zeros(roi.size(), image.type());
+	img(intersection).copyTo(test2(inter_roi));
+	cv::UMat image2 = cv::UMat(screen_height, screen_width, CV_8UC4);
+	cv::resize(test2, image2, cv::Size(screen_width, screen_height));
+	return image2;
+}
+
+cv::UMat effect9(cv::UMat img) {
+	cv::blur(img, img, cv::Size(20, 20));
+	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	return img;
+}
+
+cv::UMat effect10(cv::UMat img) {
+	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
+	cv::blur(img, img, cv::Size(20, 20));
+	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::UMat test = cv::UMat(screen_height - 2 * zy * f, screen_width, CV_8UC4);
+	cv::resize(img, test, cv::Size(screen_width, screen_height - 2 * zy * f));
+	auto image_rect = cv::Rect({}, test.size());
+	auto roi = cv::Rect(0, 0, screen_width, screen_height);
+	auto intersection = image_rect & roi;
+	auto inter_roi = intersection - roi.tl();
+	cv::Mat test2 = cv::Mat::zeros(roi.size(), image.type());
+	test(intersection).copyTo(test2(inter_roi));
+	cv::UMat image2 = cv::UMat(screen_height, screen_width, CV_8UC4);
+	cv::resize(test2, image2, cv::Size(screen_width, screen_height));
+	return image2;
+}
+
+#define NUM_EFFECTS 10
 cv::UMat(*effect)(cv::UMat) = effect1;
-cv::UMat(*effects[NUM_EFFECTS])(cv::UMat) = { effect1, effect2, effect3, effect4, effect5, effect6, effect7 };
+cv::UMat(*effects[NUM_EFFECTS])(cv::UMat) = { effect1, effect2, effect3, effect4, effect5, effect6, effect7, effect8, effect9, effect10 };
 
 void load_font() {
 	std::string path = SHADER_PATH + std::string("fonts/");
@@ -227,7 +274,6 @@ void load_font() {
 			{
 				new_file = entry.path().string();
 			}
-			
 			cur_idx += 1;
 		}
 	}
@@ -297,20 +343,15 @@ int record(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
 
 	std::vector<float> fftdata;
 	for (int i = 0; i < FRAMES; i++) {
-		fftdata.push_back(freqs[i]);
+		fftdata.push_back(sqrt(out[i].r * out[i].r + out[i].i * out[i].i));
 	}
 
-	//printf("%f\n", streamTime);
-	//bd.process(streamTime, fftdata);
+	bd->process(streamTime, fftdata);
 
 	int sample_group = FRAMES / NUM_POINTS;
 	int fft_group = (FRAMES / 3) / NUM_POINTS;
 	for (int i = 0; i < NUM_POINTS; i++) {
-		red_rawdata[i] = 0;
 		red_freqs[i] = 0;
-		for (int j = 0; j < sample_group; j++) {
-			red_rawdata[i] += rawdata[i * sample_group + j];
-		}
 		for (int j = 0; j < fft_group; j++) {
 			red_freqs[i] += freqs[i * fft_group + j];
 		}		
@@ -426,7 +467,8 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 		}
 	}
 	else if (key == GLFW_KEY_B && action == GLFW_PRESS)  {
-		background_enabled = !background_enabled;
+		background_mode += 1;
+		background_mode %= 3;
 	}
 	else if (key == GLFW_KEY_KP_DECIMAL && action == GLFW_PRESS) {
 		load_background();
@@ -488,77 +530,11 @@ static void resize(GLFWwindow* window, int width, int height) {
 	}
 }
 
-// Get the depth buffer value at this pixel.   
-std::vector<std::tuple<GLenum, std::string, std::string>> loadShaderContent(std::string vertex_path, std::string fragment_path) {
-	std::stringstream vertex;
-	vertex << std::ifstream(vertex_path).rdbuf();
-	std::stringstream fragment;
-	fragment << std::ifstream(fragment_path).rdbuf();
-	return {
-		std::make_tuple(GL_VERTEX_SHADER, vertex.str(), vertex_path),
-		std::make_tuple(GL_FRAGMENT_SHADER, fragment.str(), fragment_path),
-	};
-}
-
-bool loadShaders(GLuint* program, std::vector<std::tuple<GLenum, std::string, std::string>> shaders) {
-	for (const auto& s : shaders) {
-		GLenum type = std::get<0>(s);
-		const std::string& source = std::get<1>(s);
-
-		const GLchar* src = source.c_str();
-
-		GLuint shader = glCreateShader(type);
-		glShaderSource(shader, 1, &src, nullptr);
-		glCompileShader(shader);
-
-		GLint compiled = 0;
-		glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-		if (!compiled) {
-			GLint length = 0;
-			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
-
-			if (length > 1) {
-				std::string log(length, '\0');
-				glGetShaderInfoLog(shader, length, &length, &log[0]);
-				printf("Shader (%s) compile failed:\n%s\n", source.c_str(), log.c_str());
-			}
-			else {
-				printf("Shader (%s) compile failed.\n", source.c_str());
-			}
-
-			return false;
-		}
-
-		glAttachShader(*program, shader);
-	}
-
-	glLinkProgram(*program);
-
-	GLint linked = 0;
-	glGetProgramiv(*program, GL_LINK_STATUS, &linked);
-
-	if (!linked) {
-		GLint length = 0;
-		glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &length);
-
-		if (length > 1) {
-			std::string log(length, '\0');
-			glGetProgramInfoLog(*program, length, &length, &log[0]);
-			printf("Program (%s) link failed:\n%s", std::get<2>(shaders[0]).c_str(), log.c_str());
-		}
-		else {
-			printf("Program (%s) link failed.\n", std::get<2>(shaders[0]).c_str());
-		}
-
-		return false;
-	}
-	return true;
-}
-
 bool Initialize() {
 	getdevices();
 	load_background();
 
+	u2 = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);
 	image = cv::Mat(screen_height, screen_width, CV_8UC4);
 	bd = new BeatDetektor();
 	
@@ -606,6 +582,10 @@ bool Initialize() {
 	if (!loadShaders(&font_program, loadShaderContent(SHADER_PATH + std::string("font_vertex.glsl"), SHADER_PATH + std::string("font_fragment.glsl")))) {
 		return false;
 	}
+	pixel_program = glCreateProgram();
+	if (!loadShaders(&pixel_program, loadShaderContent(SHADER_PATH + std::string("pixel_vertex.glsl"), SHADER_PATH + std::string("pixel_fragment.glsl")))) {
+		return false;
+	}
 	printf("Created program \n");
 	set_camera(0.0f, -0.01f, 6.0f, 0.0f);
 
@@ -620,16 +600,6 @@ bool Initialize() {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		texture = cv::ogl::Texture2D(cv::Size(screen_width, screen_height), cv::ogl::Texture2D::Format::RGBA, fbo_texture, false);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		glGenTextures(1, &fbo_texture2);
-		glBindTexture(GL_TEXTURE_2D, fbo_texture2);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		texture2 = cv::ogl::Texture2D(cv::Size(screen_width, screen_height), cv::ogl::Texture2D::Format::RGBA, fbo_texture2, false);
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 
@@ -669,6 +639,25 @@ bool Initialize() {
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	glUseProgram(0);
+
+
+	GLfloat pixelVertices[12] = {-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0};
+
+	glGenVertexArrays(1, &vao2);
+	glGenBuffers(1, &vbo2);
+
+	glBindVertexArray(vao2);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo2);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(pixelVertices), pixelVertices, GL_STATIC_DRAW);
+	glUseProgram(pixel_program);
+
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glUseProgram(0);
 
 	glEnable(GL_POINT_SMOOTH);
 	glEnable(GL_CULL_FACE);
@@ -750,10 +739,6 @@ void CreateVBO() {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-
-int color_cycle = 0;
-milliseconds last_ms;
-
 void Render() {
 	ZoneScoped;
 	TracyGpuZone("Render");
@@ -768,9 +753,16 @@ void Render() {
 	double currentTime = glfwGetTime();
 	nbFrames++;
 	if (currentTime - lastTime >= 1.0) {
-		printf("%f ms/frame\n", 1000.0 / double(nbFrames));
+		//printf("%f ms/frame\n", 1000.0 / double(nbFrames));
 		nbFrames = 0;
 		lastTime += 1.0;
+	}
+
+	//if((currentTime - lastBeat) - bd->bpm_offset > bd->current_bpm && bd->quality_avg > 200.0) {
+	if (((bd->detection[0] && bd->detection[1]))) {
+		beat = true;
+	} else {
+		beat = false;
 	}
 
 	if (color_mode == 2)
@@ -815,7 +807,7 @@ void Render() {
 		glUniform1f(glGetUniformLocation(font_program, "volume"), (float)red_freqs[0]);
 		glUseProgram(0);
 		glEnable(GL_BLEND);
-		RenderText(font_program, "HI-LO", -2.0f, -0.5f, 0.005f, glm::vec3(color[0], color[1], color[2]));
+		RenderText(font_program, std::to_string(time), -2.0f, -0.5f, 0.005f, glm::vec3(color[0], color[1], color[2]));
 		glDisable(GL_BLEND);
 	} else {
 		CreateVBO();
@@ -856,42 +848,28 @@ void Render() {
 		glUseProgram(0);
 	}
 
-	
-
 	if (post_processing_enabled) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		cv::UMat u1, u2, u3, u4;
 		cv::ogl::convertFromGLTexture2D(texture, u1);
-		cv::ogl::convertFromGLTexture2D(texture2, u2);
 
 		cv::add(u1, effect(u2), u1);
 
 		//background(cv::Rect(150, 150, 50, 50)).copyTo(background(cv::Rect(0, 0, 50, 50)));
-		if (background_enabled && mode != TEXT) {
+		if ((background_mode == 1 || (background_mode == 2 && beat)) && mode != TEXT) {
 			cv::add(u1, background, u3);
-		}
-		else {
+		} else {
 			u3 = u1;
 		}
-
+		u3.copyTo(u2);
 		cv::ogl::convertToGLTexture2D(u3, texture);
-		u1.copyTo(u2);
-		cv::ogl::convertToGLTexture2D(u2, texture2);
 
+		glUseProgram(pixel_program);
+		glBindVertexArray(vao2);
 		texture.bind();
-		glEnable(GL_TEXTURE_2D);
-		glBegin(GL_QUADS);
-		glTexCoord2f(0.0f, 0.0f);
-		glVertex2f(-1.0f, -1.0f);
-		glTexCoord2f(1.0f, 0.0f);
-		glVertex2f(1.0f, -1.0f);
-		glTexCoord2f(1.0f, 1.0f);
-		glVertex2f(1.0f, 1.0f);
-		glTexCoord2f(0.0f, 1.0f);
-		glVertex2f(-1.0f, 1.0f);
-		glEnd();
-		glDisable(GL_TEXTURE_2D);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
+		glUseProgram(0);
 	}
 }
 
@@ -909,7 +887,7 @@ int main() {
 	}
 	
 	glfwMakeContextCurrent(window);
-	//glfwSwapInterval(1); // Disable vsync
+	//glfwSwapInterval(0); // Disable vsync
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetFramebufferSizeCallback(window, resize);
 	glewInit();
@@ -937,7 +915,6 @@ int main() {
 
 	while (!glfwWindowShouldClose(window)) {
 		Render();
-		glFinish();
 		glfwSwapBuffers(window);
 		TracyGpuCollect;
 		glfwPollEvents();
