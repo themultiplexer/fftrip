@@ -38,6 +38,7 @@
 #include <iostream>
 #include <filesystem>
 #include "colors.h"
+#include "audioanalyzer.h"
 #include <chrono>
 #include <Tracy.hpp>
 #include <TracyOpenGL.hpp>
@@ -52,14 +53,14 @@ namespace fs = std::filesystem;
 
 #define SPHERE_LAYERS 8
 #define FRAMES 1024
-#define NUM_POINTS 64
+#define NUM_POINTS 128
 #define SHADER_PATH "../"
 
 GLFWwindow* window;
 GLuint program, font_program, pixel_program;
 GLuint vao, vbo, vao2, vbo2;
 GLuint ssaoFramebufferID, ssaoDepthTextureID;
-float radius = 1.0f;
+float radius = 0.5f;
 RtAudio adc(RtAudio::Api::LINUX_PULSE);
 GLfloat circleVertices[NUM_POINTS * VERT_LENGTH * SPHERE_LAYERS];
 /* Global */
@@ -68,14 +69,14 @@ GLuint fbo, fbo_texture, fbo_texture2, rbo_depth;
 cv::ogl::Texture2D texture, texture2;
 cv::UMat background;
 
+AudioAnalyzer *aanalyzer;
+
 kiss_fft_cfg cfg;
 
 unsigned int screen_width = 3840;
 unsigned int screen_height = 2160;
 
-float rawdata[FRAMES];
-float freqs[FRAMES];
-float red_freqs[NUM_POINTS];
+std::vector<float> red_freqs;
 
 double lastTime = glfwGetTime();
 int nbFrames = 0;
@@ -89,7 +90,7 @@ int dilation_size = 1;
 int erosion_size = 1;
 float angle = 0.4f;
 float sensitivity = 0.1;
-float zoom_sensitivity = 0.1;
+float zoom_sensitivity = 0.5;
 float lineWidth = 10.0;
 
 
@@ -319,78 +320,6 @@ void load_background() {
 	current_file_index %= cur_idx;
 }
 
-int record(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
-	double streamTime, RtAudioStreamStatus status, void* userData) {
-	if (status) {
-		std::cout << "Stream overflow detected!" << std::endl;
-		return 0;
-	}
-
-	// printf("%d \n", nBufferFrames);
-	kiss_fft_cpx in[FRAMES] = {};
-	for (unsigned int i = 0; i < nBufferFrames; i++) {
-		in[i].r = ((float*)inputBuffer)[i];
-		rawdata[i] = ((float*)inputBuffer)[i];
-	}
-
-	kiss_fft_cpx out[FRAMES] = {};
-	kiss_fft(cfg, in, out);
-	for (int i = 0; i < FRAMES; i++) {
-		freqs[i] = sqrt(out[i].r * out[i].r + out[i].i * out[i].i);
-		//freqs[i] = (log10(freqs[i] + 0.1) + 1.0) * 2.0;
-		freqs[i] *= log10(((float)i/FRAMES) * 10 + 1.01);
-	}
-
-	std::vector<float> fftdata;
-	for (int i = 0; i < FRAMES; i++) {
-		fftdata.push_back(sqrt(out[i].r * out[i].r + out[i].i * out[i].i));
-	}
-
-	bd->process(streamTime, fftdata);
-
-	int sample_group = FRAMES / NUM_POINTS;
-	int fft_group = (FRAMES / 3) / NUM_POINTS;
-	for (int i = 0; i < NUM_POINTS; i++) {
-		red_freqs[i] = 0;
-		for (int j = 0; j < fft_group; j++) {
-			red_freqs[i] += freqs[i * fft_group + j];
-		}		
-	}
-
-	// Do something with the data in the "inputBuffer" buffer.
-	return 0;
-}
-
-void getdevices() {
-	// Get the list of device IDs
-#ifdef _WIN32
-	std::vector<unsigned int> ids(adc.getDeviceCount());
-	std::iota(ids.begin(), ids.end(), 0);
-#else
-	std::vector<unsigned int> ids = adc.getDeviceIds();
-#endif
-	if (ids.size() == 0) {
-		std::cout << "No devices found." << std::endl;
-		exit(0);
-	}
-
-	// Scan through devices for various capabilities
-	RtAudio::DeviceInfo info;
-	for (unsigned int n = 0; n < ids.size(); n++) {
-
-		info = adc.getDeviceInfo(ids[n]);
-
-		// Print, for example, the name and maximum number of output channels for
-		// each device
-		std::cout << "device name = " << info.name << std::endl;
-		std::cout << "device id = " << ids[n] << std::endl;
-		std::cout << ": maximum input channels = " << info.inputChannels
-			<< std::endl;
-		std::cout << ": maximum output channels = " << info.outputChannels
-			<< std::endl;
-	}
-}
-
 static void set_camera(float cam_x, float cam_y, float cam_z, float target_z) {
 	GLuint programs[2] = { program, font_program };
 	for (int i = 0; i < 2; i++) {
@@ -531,7 +460,9 @@ static void resize(GLFWwindow* window, int width, int height) {
 }
 
 bool Initialize() {
-	getdevices();
+	aanalyzer = new AudioAnalyzer(NUM_POINTS);
+	aanalyzer->getdevices();
+    aanalyzer->startRecording();
 	load_background();
 
 	u2 = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);
@@ -541,37 +472,6 @@ bool Initialize() {
 	start = duration_cast< milliseconds >(
 		system_clock::now().time_since_epoch()
 	);
-
-	RtAudio::StreamParameters parameters;
-	parameters.deviceId = adc.getDefaultInputDevice();
-	// parameters.deviceId = 132;
-	parameters.nChannels = 1;
-	parameters.firstChannel = 0;
-	unsigned int sampleRate = 48000;
-	unsigned int bufferFrames = FRAMES;
-
-	cfg = kiss_fft_alloc(FRAMES, 0, NULL, NULL);
-#ifdef _WIN32
-	bool failure = false;
-	try
-	{
-		adc.openStream(NULL, &parameters, RTAUDIO_FLOAT32, sampleRate, &bufferFrames, &record);
-		adc.startStream();
-	}
-	catch (const RtAudioError e)
-	{
-		std::cout << '\n' << e.getMessage() << '\n' << std::endl;
-	}
-#else
-	if (adc.openStream(NULL, &parameters, RTAUDIO_FLOAT32, sampleRate, &bufferFrames, &record)) {
-		std::cout << '\n' << adc.getErrorText() << '\n' << std::endl;
-		exit(0); // problem with device settings
-	}
-	// Stream is open ... now start it.
-	if (adc.startStream()) {
-		std::cout << adc.getErrorText() << std::endl;
-	}
-#endif
 
 	printf("Creating program \n");
 	program = glCreateProgram();
@@ -601,7 +501,6 @@ bool Initialize() {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, screen_width, screen_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		texture = cv::ogl::Texture2D(cv::Size(screen_width, screen_height), cv::ogl::Texture2D::Format::RGBA, fbo_texture, false);
 		glBindTexture(GL_TEXTURE_2D, 0);
-
 
 		/* Depth buffer */
 		glGenRenderbuffers(1, &rbo_depth);
@@ -743,6 +642,7 @@ void Render() {
 	ZoneScoped;
 	TracyGpuZone("Render");
 	FrameMark;
+
 	glLineWidth(lineWidth);
 	glPointSize(10.0);
 	if (post_processing_enabled) {
@@ -757,6 +657,10 @@ void Render() {
 		nbFrames = 0;
 		lastTime += 1.0;
 	}
+
+	red_freqs = aanalyzer->getFrequencies();
+	auto freqs = aanalyzer->getFullFrequencies();
+	bd->process(aanalyzer->getStreamTime(), freqs);
 
 	//if((currentTime - lastBeat) - bd->bpm_offset > bd->current_bpm && bd->quality_avg > 200.0) {
 	if (((bd->detection[0] && bd->detection[1]))) {
@@ -778,7 +682,7 @@ void Render() {
 		milliseconds current_ms = duration_cast<milliseconds>(
 			system_clock::now().time_since_epoch()
 		);
-		if (red_freqs[0] > 3.0 && (current_ms.count() - last_ms.count()) > 100) {
+		if (red_freqs[0] > 1.5 && (current_ms.count() - last_ms.count()) > 100) {
 			if (color_cycle == 0)
 			{
 				color[0] = 1.0;

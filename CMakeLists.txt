@@ -28,7 +28,7 @@ find_package(RtAudio REQUIRED)
 
 
 add_compile_definitions(_USE_MATH_DEFINES)
-add_executable(fftrip main.cpp "colors.h" "font_rendering.h" "3rdparty/beatdetektor/cpp/BeatDetektor.cpp")
+add_executable(fftrip main.cpp audioanalyzer.cpp "3rdparty/beatdetektor/cpp/BeatDetektor.cpp")
 
 include_directories( ${OpenCV_INCLUDE_DIRS} ${OpenCL_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS} )
 
