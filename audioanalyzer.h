@@ -8,25 +8,27 @@
 class AudioAnalyzer
 {
 public:
-    AudioAnalyzer(int frequency_bins);
+    AudioAnalyzer();
     void getdevices();
     void startRecording();
     double getStreamTime();
 
-    std::vector<float> getFrequencies();
-    std::vector<float> getFullFrequencies();
+    std::vector<float> getLeftFrequencies();
+    std::vector<float> getRightFrequencies();
 protected:
     static int static_record(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames, double streamTime, unsigned int status, void *userData);
 private:
     int record(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames, double streamTime, RtAudioStreamStatus status);
 
-    float rawdata[FRAMES/2];
+
+    double streamTimePoint;
     float freqs[FRAMES/2];
-    std::vector<float> red_freqs;
+    float freqs2[FRAMES/2];
     kiss_fft_cfg cfg;
     RtAudio *adc;
-    double streamTimePoint;
-    int fbins;
+    bool stereo;
+    void do_kissfft(void *inputBuffer, float *outputBuffer, int channel);
+    void applyHannWindow(float *data, int channel);
 };
 
 #endif // AUDIOANALYZER_H

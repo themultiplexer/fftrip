@@ -49,11 +49,10 @@
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
-#define VERT_LENGTH 4 // x,y,z,volume
-
+#define VERT_LENGTH 5 // x,y,z,frequency, volume
 #define SPHERE_LAYERS 8
 #define FRAMES 1024
-#define NUM_POINTS 128
+#define NUM_POINTS FRAMES/2
 #define SHADER_PATH "../"
 
 GLFWwindow* window;
@@ -89,9 +88,10 @@ int zy = 21;
 int dilation_size = 1;
 int erosion_size = 1;
 float angle = 0.4f;
-float sensitivity = 0.1;
+float sensitivity = 1.0;
 float zoom_sensitivity = 0.5;
 float lineWidth = 10.0;
+float inner_radius = 1.0;
 
 
 bool post_processing_enabled = true;
@@ -120,11 +120,13 @@ cv::UMat u1, u2, u3;
 
 BeatDetektor *bd;
 
+float reactive_frequency;
+
 
 cv::UMat effect1(cv::UMat img) {
-	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
+	float f = reactive_zoom_enabled ? (reactive_frequency * zoom_sensitivity) : zoom_sensitivity * 5.0;
 	cv::blur(img, img, cv::Size(10, 10));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[1] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
 	cv::UMat rot;
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	cv::Mat matRotation = cv::getRotationMatrix2D(center, angle * f, 1.0);
@@ -139,7 +141,7 @@ cv::UMat effect1(cv::UMat img) {
 
 cv::UMat effect2(cv::UMat img) {
 	cv::blur(img, img, cv::Size(10, 10));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
 	cv::UMat rot;
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	cv::Mat matRotation = cv::getRotationMatrix2D(center, angle, 1.0);
@@ -153,9 +155,9 @@ cv::UMat effect2(cv::UMat img) {
 }
 
 cv::UMat effect3(cv::UMat img) {
-	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
+	float f = reactive_zoom_enabled ? (reactive_frequency * zoom_sensitivity) : zoom_sensitivity * 5.0;
 	cv::blur(img, img, cv::Size(10, 10));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[1] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	//cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
 	//cv::warpAffine(img, img, matRotation, img.size());
@@ -169,9 +171,9 @@ cv::UMat effect3(cv::UMat img) {
 }
 
 cv::UMat effect4(cv::UMat img) {
-	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
+	float f = reactive_zoom_enabled ? (reactive_frequency * zoom_sensitivity) : zoom_sensitivity * 5.0;
 	cv::blur(img, img, cv::Size(10, 10));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	cv::UMat rot;
 	cv::Mat trans_mat = (cv::Mat_<double>(2, 3) << 1, 0, 0, 0, 1, -20);
@@ -186,7 +188,7 @@ cv::UMat effect4(cv::UMat img) {
 
 cv::UMat effect5(cv::UMat img) {
 	cv::blur(img, img, cv::Size(20, 20));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	//cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
 	//cv::warpAffine(img, img, matRotation, img.size());
@@ -200,7 +202,7 @@ cv::UMat effect5(cv::UMat img) {
 
 cv::UMat effect6(cv::UMat img) {
 	cv::blur(img, img, cv::Size(20, 20));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
 	cv::UMat test2 = img(cv::Rect(zx, zy, screen_width - 2 * zx, screen_height - 2 * zy));
 	cv::UMat image2 = cv::UMat(screen_height, screen_width, CV_8UC4);
 	cv::resize(test2, image2, cv::Size(screen_width, screen_height));
@@ -208,7 +210,7 @@ cv::UMat effect6(cv::UMat img) {
 }
 
 cv::UMat effect7(cv::UMat img) {
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
 	cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
 	//cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
 	//cv::warpAffine(img, img, matRotation, img.size());
@@ -223,9 +225,9 @@ cv::UMat effect7(cv::UMat img) {
 }
 
 cv::UMat effect8(cv::UMat img) {
-	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
+	float f = reactive_zoom_enabled ? (reactive_frequency * zoom_sensitivity) : zoom_sensitivity * 5.0;
 	cv::blur(img, img, cv::Size(20, 20));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
 	auto image_rect = cv::Rect({}, img.size());
 	auto roi = cv::Rect(zx, zy, screen_width, screen_height + 2 * zy * f);
 	auto intersection = image_rect & roi;
@@ -239,14 +241,14 @@ cv::UMat effect8(cv::UMat img) {
 
 cv::UMat effect9(cv::UMat img) {
 	cv::blur(img, img, cv::Size(20, 20));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
 	return img;
 }
 
 cv::UMat effect10(cv::UMat img) {
-	float f = reactive_zoom_enabled ? (red_freqs[0] * zoom_sensitivity) : zoom_sensitivity * 5.0;
+	float f = reactive_zoom_enabled ? (reactive_frequency * zoom_sensitivity) : zoom_sensitivity * 5.0;
 	cv::blur(img, img, cv::Size(20, 20));
-	cv::addWeighted(img, 0.0, img, 0.98 - red_freqs[0] * 0.001, 0.0, img);
+	cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
 	cv::UMat test = cv::UMat(screen_height - 2 * zy * f, screen_width, CV_8UC4);
 	cv::resize(img, test, cv::Size(screen_width, screen_height - 2 * zy * f));
 	auto image_rect = cv::Rect({}, test.size());
@@ -409,11 +411,11 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 	}
 	else if (key == GLFW_KEY_KP_ADD && action == GLFW_PRESS) {
 		zoom_sensitivity += 0.05;
-		zoom_sensitivity = std::clamp(zoom_sensitivity, 0.0f, 1.0f);
+		zoom_sensitivity = std::clamp(zoom_sensitivity, 0.0f, 5.0f);
 	}
 	else if (key == GLFW_KEY_KP_SUBTRACT && action == GLFW_PRESS) {
 		zoom_sensitivity -= 0.05;
-		zoom_sensitivity = std::clamp(zoom_sensitivity, 0.0f, 1.0f);
+		zoom_sensitivity = std::clamp(zoom_sensitivity, 0.0f, 5.0f);
 	}
 	else if (key == GLFW_KEY_KP_6 && action == GLFW_PRESS) {
 		lineWidth += 2.0;
@@ -422,8 +424,19 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action,
 	else if (key == GLFW_KEY_KP_9 && action == GLFW_PRESS) {
 		lineWidth -= 2.0;
 		lineWidth = std::clamp(lineWidth, 2.0f, 10.0f);
+	} else if (key == GLFW_KEY_KP_5 && action == GLFW_PRESS) {
+		inner_radius -= 0.1;
+		inner_radius = std::clamp(inner_radius, 0.0f, 10.0f);
+	} else if (key == GLFW_KEY_KP_8 && action == GLFW_PRESS) {
+		inner_radius += 0.1;
+		inner_radius = std::clamp(inner_radius, 0.0f, 10.0f);
+	} else if (key == GLFW_KEY_KP_4 && action == GLFW_PRESS) {
+		sensitivity -= 0.1;
+		sensitivity = std::clamp(sensitivity, 0.0f, 10.0f);
+	} else if (key == GLFW_KEY_KP_7 && action == GLFW_PRESS) {
+		sensitivity += 0.1;
+		sensitivity = std::clamp(sensitivity, 0.0f, 10.0f);
 	}
-
 }
 
 bool Initialize();
@@ -460,7 +473,7 @@ static void resize(GLFWwindow* window, int width, int height) {
 }
 
 bool Initialize() {
-	aanalyzer = new AudioAnalyzer(NUM_POINTS);
+	aanalyzer = new AudioAnalyzer();
 	aanalyzer->getdevices();
     aanalyzer->startRecording();
 	load_background();
@@ -488,7 +501,6 @@ bool Initialize() {
 	}
 	printf("Created program \n");
 	set_camera(0.0f, -0.01f, 6.0f, 0.0f);
-
 
 	if (post_processing_enabled) {
 		glActiveTexture(GL_TEXTURE0);
@@ -531,10 +543,12 @@ bool Initialize() {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(circleVertices), circleVertices, GL_STATIC_DRAW);
 	glUseProgram(program);
 
-	glVertexAttribPointer(0, VERT_LENGTH, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, VERT_LENGTH * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (GLvoid*)(4 * sizeof(GLfloat)));
+	glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, VERT_LENGTH * sizeof(float), (GLvoid*)(3 * sizeof(GLfloat)));
 	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, VERT_LENGTH * sizeof(float), (GLvoid*)(4 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(2);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
@@ -567,25 +581,34 @@ bool Initialize() {
 	return true;
 }
 
+static int base = 40;
+static float f(float x) {
+    return (pow(base, x) - 1.0) / (base - 1.0);
+}
+static float g(float x) {
+    return log(x * (base - 1.0) + 1.0) / log(base);
+}
 
 void CreateVBO() {
 	std::vector<float> vertices;
 
 	if (mode == LINES) {
 		for (int i = 0; i < NUM_POINTS; i++) {
-			float vert[5] = { i * (4.0f / NUM_POINTS) - 2.0f, red_freqs[i] * sensitivity, 0.0, red_freqs[i] * sensitivity, (float)i / NUM_POINTS };
+			float pct_frq = g(float(i) / float(NUM_POINTS));
+			float vert[VERT_LENGTH] = { pct_frq * (4.0f) - 2.0f, red_freqs[i] * sensitivity, 0.0, red_freqs[i], pct_frq };
 			vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
 		}
 	}
 	else if (mode == CIRCLE) {
 		for (int i = 0; i < NUM_POINTS; i++) {
-			float theta = 2.0f * M_PI * float(i) / float(NUM_POINTS) - M_PI;
-			float r = red_freqs[i] * sensitivity + 0.5;
+			float pct_frq = g(float(i) / float(NUM_POINTS));
+			float theta = -2.0f * M_PI * pct_frq - M_PI;
+			float r = red_freqs[i] * sensitivity + inner_radius;
 
 			float x = radius * r * cosf(theta);
 			float y = radius * r * sinf(theta);
 
-			float vert[5] = { x, y, 0.0, red_freqs[i] * sensitivity, (float)i / NUM_POINTS };
+			float vert[VERT_LENGTH] = { x, y, 0.0, red_freqs[i], pct_frq };
 			vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
 		}
 	}
@@ -593,34 +616,36 @@ void CreateVBO() {
 		for (int i = 0; i < NUM_POINTS; i++) {
 			float theta1 = 2.0f * M_PI * float(i) / float(NUM_POINTS) - M_PI;
 			float theta2 = 2.0f * M_PI * float(i + 1) / float(NUM_POINTS) - M_PI;
-			float r = red_freqs[i] * sensitivity + 0.5;
+			float r = red_freqs[i] * sensitivity + inner_radius;
 
-			float c[5] = { 0.0, 0.0, 0.0, 0.0, (float)i / NUM_POINTS };
+			float c[VERT_LENGTH] = { 0.0, 0.0, 0.0, 0.0, (float)i / NUM_POINTS };
 			vertices.insert(vertices.end(), std::begin(c), std::end(c));
-			float b[5] = { radius * r * sinf(theta2), radius * r * sinf(theta2), 0.0, 0.0, (float)i / NUM_POINTS };
+			float b[VERT_LENGTH] = { radius * r * sinf(theta2), radius * r * sinf(theta2), 0.0, 0.0, (float)i / NUM_POINTS };
 			vertices.insert(vertices.end(), std::begin(b), std::end(b));
-			float a[5] = { radius * r * cosf(theta1), radius * r * sinf(theta1), 0.0, red_freqs[i] * sensitivity, (float)i / NUM_POINTS };
+			float a[VERT_LENGTH] = { radius * r * cosf(theta1), radius * r * sinf(theta1), 0.0, red_freqs[i], (float)i / NUM_POINTS };
 			vertices.insert(vertices.end(), std::begin(a), std::end(a));
 		}
 	}
 	else if (mode == SPHERE) {
 		for (int c = 0; c < SPHERE_LAYERS; c++) {
 			for (int i = 0; i < NUM_POINTS; i++) {
-				float theta = 2.0f * M_PI * float(i) / float(NUM_POINTS) - M_PI;
+				float pct_frq = g(float(i) / float(NUM_POINTS));
+				float theta = 2.0f * M_PI * pct_frq - M_PI;
 
 				float r = red_freqs[i] * sensitivity + 0.5;
 				float layer = sin(((float)c / (float)SPHERE_LAYERS) * M_PI);
 				float x = radius * layer * r * cosf(theta);
 				float y = radius * layer * r * sinf(theta);
 
-				float vert[5] = { x, y, c * 0.2f, red_freqs[i] * sensitivity, (float)i / NUM_POINTS };
+				float vert[VERT_LENGTH] = { x, y, c * 0.2f, red_freqs[i], (float)i / NUM_POINTS };
 				vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
 			}
 		}
 	}
 	else if (mode == SPHERE_SPIRAL) {
 		for (int i = 0; i < NUM_POINTS; i++) {
-			float theta = 5.0f * 2.0f * M_PI * float(i) / float(NUM_POINTS) - M_PI;
+			float pct_frq = g(float(i) / float(NUM_POINTS));
+			float theta = 5.0f * 2.0f * M_PI * pct_frq - M_PI;
 
 			float r = red_freqs[i] * sensitivity + 0.5;
 			float percent = ((float)i / (float)(NUM_POINTS));
@@ -628,7 +653,7 @@ void CreateVBO() {
 			float x = radius * layer * r * cosf(theta);
 			float y = radius * layer * r * sinf(theta);
 
-			float vert[5] = { x, y, percent * 2.0f, red_freqs[i] * sensitivity, (float)i / NUM_POINTS };
+			float vert[VERT_LENGTH] = { x, y, percent * 2.0f, red_freqs[i], (float)i / NUM_POINTS };
 			vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
 		}
 	}
@@ -658,9 +683,13 @@ void Render() {
 		lastTime += 1.0;
 	}
 
-	red_freqs = aanalyzer->getFrequencies();
-	auto freqs = aanalyzer->getFullFrequencies();
-	bd->process(aanalyzer->getStreamTime(), freqs);
+	red_freqs = aanalyzer->getLeftFrequencies();
+	for (int i = 0; i < FRAMES/2; i++) {
+        red_freqs[i] *= log10(((float)i/(FRAMES/2)) * 5.0 + 1.01);
+        red_freqs[i] = log10(red_freqs[i] * 2.0 + 1.01);
+	}
+	reactive_frequency = red_freqs[4];
+	bd->process(aanalyzer->getStreamTime(), red_freqs);
 
 	//if((currentTime - lastBeat) - bd->bpm_offset > bd->current_bpm && bd->quality_avg > 200.0) {
 	if (((bd->detection[0] && bd->detection[1]))) {
@@ -672,13 +701,12 @@ void Render() {
 	if (color_mode == 2)
 	{
 		int freq_index = std::distance(std::begin(red_freqs), std::max_element(std::begin(red_freqs), std::end(red_freqs)));
-		rgb rgbcolor = hsv2rgb(hsv{ ((float)freq_index / NUM_POINTS) * 360.0, 1.0 - ((float)freq_index / NUM_POINTS) , 1.0  });
+		int log_freq_index = ((float)freq_index / (float)NUM_POINTS);
+		rgb rgbcolor = hsv2rgb(hsv{ log_freq_index * 360.0, 1.0 - log_freq_index, 1.0  });
 		color[0] = rgbcolor.r;
 		color[1] = rgbcolor.g;
 		color[2] = rgbcolor.b;
-	}
-	else if (color_mode == 3)
-	{
+	} else if (color_mode == 3) {
 		milliseconds current_ms = duration_cast<milliseconds>(
 			system_clock::now().time_since_epoch()
 		);
@@ -708,6 +736,7 @@ void Render() {
 	{
 		glUseProgram(font_program);
 		glUniform1f(glGetUniformLocation(font_program, "time"), (float)time);
+		glUniform1f(glGetUniformLocation(font_program, "width"), (float)lineWidth);
 		glUniform1f(glGetUniformLocation(font_program, "volume"), (float)red_freqs[0]);
 		glUseProgram(0);
 		glEnable(GL_BLEND);
@@ -756,17 +785,13 @@ void Render() {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 		cv::ogl::convertFromGLTexture2D(texture, u1);
+		cv::add(u1, effect(u2), u1); // Magic here
+		u1.copyTo(u2);
 
-		cv::add(u1, effect(u2), u1);
-
-		//background(cv::Rect(150, 150, 50, 50)).copyTo(background(cv::Rect(0, 0, 50, 50)));
 		if ((background_mode == 1 || (background_mode == 2 && beat)) && mode != TEXT) {
-			cv::add(u1, background, u3);
-		} else {
-			u3 = u1;
+			cv::add(u1, background, u1);
 		}
-		u3.copyTo(u2);
-		cv::ogl::convertToGLTexture2D(u3, texture);
+		cv::ogl::convertToGLTexture2D(u1, texture);
 
 		glUseProgram(pixel_program);
 		glBindVertexArray(vao2);
@@ -806,7 +831,7 @@ int main() {
 		cv::ogl::ocl::initializeContextFromGL();
 	}
 
-	if (LoadFontRendering(SHADER_PATH + std::string("fonts/arial.ttf")))
+	if (LoadFontRendering(SHADER_PATH + std::string("fonts/DroidSansMono.ttf")))
 	{
 		return -1;
 	}

@@ -4,17 +4,18 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 proj;
 
-layout (location = 0) in vec4 inPosition;
-layout (location = 1) in float freq;
+layout (location = 0) in vec3 position;
+layout (location = 1) in float volume;
+layout (location = 2) in float frequency;
 
-uniform vec2 uResolution; // = (window-width, window-height)
-out float volume;
-out float freqency;
+uniform vec2 uResolution;
+out float vol;
+out float frq;
 
 void main() {
-    vec2  pos = inPosition.xy;
+    vec2  pos = position.xy;
     float AR = uResolution.y / uResolution.x;
-    volume = inPosition.w;
-    gl_Position = proj * view * model * vec4(pos, inPosition.z, 1.0);
-    freqency = freq;
+    vol = volume;
+    gl_Position = proj * view * model * vec4(pos, position.z, 1.0);
+    frq = frequency;
 }

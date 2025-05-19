@@ -6,16 +6,17 @@ uniform sampler2D text;
 uniform vec3 textColor;
 uniform float time;
 uniform float volume;
+uniform float width;
 
 const float smoothing = 0.1f;
 
 void main()
 {
-    if(false) {
+    if(true) {
         float distance = texture2D(text, TexCoords).r;
         float width1 = abs(sin(3.0f * time)) * 0.1 + 0.5;
         float alpha1 = smoothstep(width1 - smoothing, width1 + smoothing, distance);
-        float width2 = abs(sin(3.0f * time)) * 0.1 + 0.4;
+        float width2 = abs(sin(3.0f * time)) * 0.05 + (width / 20.0);
         float alpha2 = smoothstep(width2 - smoothing, width2 + smoothing, distance);
         color = vec4(textColor.rgb, alpha2 - alpha1);
     } else {
