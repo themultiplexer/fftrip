@@ -1,8 +1,11 @@
 #include "audioanalyzer.h"
+#include <iostream>
+#include <iterator>
 
-AudioAnalyzer::AudioAnalyzer(): stereo(false) {
+AudioAnalyzer::AudioAnalyzer(): stereo(true) {
     cfg = kiss_fft_alloc(FRAMES, 0, NULL, NULL);
     adc = new RtAudio(RtAudio::Api::LINUX_PULSE);
+    ceps = true;
 }
 
 void AudioAnalyzer::applyHannWindow(float* data, int channel) {
@@ -60,11 +63,22 @@ void AudioAnalyzer::do_kissfft(void* inputBuffer, float* outputBuffer, int chann
         in[i].r = ((float*)inputBuffer)[ind];
     }
 
-    kiss_fft_cpx out[FRAMES] = {};
-    kiss_fft(cfg, in, out);
-    for (int i = 0; i < FRAMES/2; i++) {
-        outputBuffer[i] = sqrt(out[i].r * out[i].r + out[i].i * out[i].i);
+    if (!ceps) {
+        std::cout << "noceps" << std::endl;
+        kiss_fft_cpx out[FRAMES] = {};
+        kiss_fft(cfg, in, out);
+        for (int i = 0; i < FRAMES/2; i++) {
+            outputBuffer[i] = sqrt(out[i].r * out[i].r + out[i].i * out[i].i);
+        }
+    } else {
+        std::cout << "ceps" << std::endl;
+        kiss_fft_cpx fft[FRAMES] = {};
+        kiss_fft(cfg, in, fft);
+        for (int i = 0; i < FRAMES/2; i++) {
+            outputBuffer[i] = log(sqrt(fft[i].r * fft[i].r + fft[i].i * fft[i].i));
+        }
     }
+
 }
 
 int AudioAnalyzer::record(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames, double streamTime, unsigned int status) {
@@ -77,12 +91,12 @@ int AudioAnalyzer::record(void* outputBuffer, void* inputBuffer, unsigned int nB
     int upperLimit = (FRAMES/2) - 50;
 
     if (stereo) {
-        applyHannWindow(((float *)inputBuffer), 0);
+        //applyHannWindow(((float *)inputBuffer), 0);
         do_kissfft(inputBuffer, freqs, 0);
-        applyHannWindow(((float *)inputBuffer), 1);
+        //applyHannWindow(((float *)inputBuffer), 1);
         do_kissfft(inputBuffer, freqs2, 1);
     } else {
-        applyHannWindow(((float *)inputBuffer), 0);
+        //applyHannWindow(((float *)inputBuffer), 0);
         do_kissfft(inputBuffer, freqs, 0);
     }
 

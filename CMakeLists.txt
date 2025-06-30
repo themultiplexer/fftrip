@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.20)
 project(fftrip)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -33,15 +33,8 @@ add_executable(fftrip main.cpp audioanalyzer.cpp "3rdparty/beatdetektor/cpp/Beat
 include_directories( ${OpenCV_INCLUDE_DIRS} ${OpenCL_INCLUDE_DIRS} ${FREETYPE_INCLUDE_DIRS} )
 
 
-add_library(TracyClient STATIC 3rdparty/tracy/public/TracyClient.cpp
-                               3rdparty/tracy/public/tracy/TracyOpenCL.hpp)
-
-target_include_directories(TracyClient PUBLIC 3rdparty/tracy/public/tracy)
-target_compile_definitions(TracyClient PUBLIC TRACY_ENABLE=1)
-
-
 IF (WIN32)
-target_link_libraries(fftrip ${X11_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} ${OpenCV_LIBS} ${OpenCL_LIBS} ${FREETYPE_LIBRARIES} TracyClient glfw RtAudio::rtaudio unofficial::kissfft::kissfft)
+target_link_libraries(fftrip ${X11_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} ${OpenCV_LIBS} ${OpenCL_LIBS} ${FREETYPE_LIBRARIES} glfw RtAudio::rtaudio unofficial::kissfft::kissfft)
 ELSE()
-target_link_libraries(fftrip ${X11_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} ${OpenCV_LIBS} ${OpenCL_LIBS} ${FREETYPE_LIBRARIES} TracyClient glfw RtAudio::rtaudio "/usr/lib/x86_64-linux-gnu/libkissfft-float.so.131.1.0")
+target_link_libraries(fftrip ${X11_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} ${OpenCV_LIBS} ${OpenCL_LIBS} ${FREETYPE_LIBRARIES} glfw RtAudio::rtaudio "/usr/lib/x86_64-linux-gnu/libkissfft-float.so.131.1.0")
 ENDIF()
