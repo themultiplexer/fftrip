@@ -40,6 +40,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <fstream>
+#include <nlohmann/json.hpp>
 
 #include "3rdparty/beatdetektor/cpp/BeatDetektor.h"
 #include "audioanalyzer.h"
@@ -48,6 +50,7 @@
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 #define VERT_LENGTH 5  // x,y,z,frequency, volume
 #define SPHERE_LAYERS 8
@@ -106,13 +109,16 @@ milliseconds start;
 cv::Mat image;
 GLfloat color[4] = {1.0, 0.0, 0.0, 1.0};
 
+
+
 enum VisMode {
     LINES,
     CIRCLE,
     CIRCLE_FLAT,
     SPHERE,
     SPHERE_SPIRAL,
-    TEXT
+    TEXT,
+    OUTLINE
 };
 enum BackgroundMode {
     OFF,
@@ -129,6 +135,8 @@ bool beat = false;
 BeatDetektor *bd;
 float reactive_frequency;
 bool inverted = false;
+
+std::vector<glm::vec2> svg_points;
 
 cv::UMat u1, u2, u3;
 
@@ -389,6 +397,8 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
             mode = VisMode::TEXT;
         } else if (key == GLFW_KEY_I) {
             load_font();
+        } else if (key == GLFW_KEY_U) {
+            mode = VisMode::OUTLINE;
         } else if (key == GLFW_KEY_P) {
             post_processing_enabled = !post_processing_enabled;
         } else if (key == GLFW_KEY_F) {
@@ -400,7 +410,6 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
         } else if (key == GLFW_KEY_K) {
             inverted = !inverted;
         } else if (key == GLFW_KEY_G) {
-            printf("Ceps \n");
             aanalyzer->ceps = !aanalyzer->ceps;
         }else if (key == GLFW_KEY_D) {
             color_mode += 1;
@@ -619,7 +628,8 @@ std::vector<float> create_vbo(std::vector<float> frequencies, float range) {
         for (int i = 0; i < NUM_POINTS; i++) {
             float pct_frq = g(float(i) / float(NUM_POINTS));
             float theta = -2.0f * range *  M_PI * pct_frq - M_PI_2;
-            float r = frequencies[i] * sensitivity + inner_radius;
+            //float r = frequencies[i] * sensitivity + inner_radius;
+            float r = inner_radius - frequencies[i] * sensitivity;
 
             float x = radius * r * cosf(theta);
             float y = radius * r * sinf(theta);
@@ -631,7 +641,8 @@ std::vector<float> create_vbo(std::vector<float> frequencies, float range) {
         for (int i = 0; i < NUM_POINTS; i++) {
             float theta1 = 2.0f * M_PI * float(i) / float(NUM_POINTS) - M_PI;
             float theta2 = 2.0f * M_PI * float(i + 1) / float(NUM_POINTS) - M_PI;
-            float r = frequencies[i] * sensitivity + inner_radius;
+            //float r = frequencies[i] * sensitivity + inner_radius;
+            float r = inner_radius - frequencies[i] * sensitivity;
 
             float c[VERT_LENGTH] = {0.0, 0.0, 0.0, 0.0, (float)i / NUM_POINTS};
             vertices.insert(vertices.end(), std::begin(c), std::end(c));
@@ -667,6 +678,14 @@ std::vector<float> create_vbo(std::vector<float> frequencies, float range) {
 
             float vert[VERT_LENGTH] = {x, y, pct_frq * 2.0f, frequencies[i], pct_frq};
             vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
+        }
+    } else if (mode == OUTLINE) {
+        for (int i = 0; i < NUM_POINTS; i++) {
+            if (i < svg_points.size()) {
+                float pct_frq = g(float(i) / float(NUM_POINTS));
+                float vert[VERT_LENGTH] = {svg_points[i].x, svg_points[i].y, 0, frequencies[i], pct_frq};
+                vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
+            }
         }
     }
 
@@ -867,6 +886,13 @@ int main() {
     if (!Initialize()) {
         printf("Scene initialization failed.\n");
         return 1;
+    }
+
+    std::ifstream f("../outlines/data.json");
+    json data = json::parse(f);
+    for (auto d : data) {
+        std::cout << d.dump() << std::endl;
+        svg_points.push_back(glm::vec2(d[0], d[1]));
     }
 
     while (!glfwWindowShouldClose(window)) {

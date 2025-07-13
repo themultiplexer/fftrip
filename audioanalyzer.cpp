@@ -2,10 +2,9 @@
 #include <iostream>
 #include <iterator>
 
-AudioAnalyzer::AudioAnalyzer(): stereo(true) {
+AudioAnalyzer::AudioAnalyzer(): stereo(true), ceps(false) {
     cfg = kiss_fft_alloc(FRAMES, 0, NULL, NULL);
     adc = new RtAudio(RtAudio::Api::LINUX_PULSE);
-    ceps = true;
 }
 
 void AudioAnalyzer::applyHannWindow(float* data, int channel) {
@@ -64,14 +63,12 @@ void AudioAnalyzer::do_kissfft(void* inputBuffer, float* outputBuffer, int chann
     }
 
     if (!ceps) {
-        std::cout << "noceps" << std::endl;
         kiss_fft_cpx out[FRAMES] = {};
         kiss_fft(cfg, in, out);
         for (int i = 0; i < FRAMES/2; i++) {
             outputBuffer[i] = sqrt(out[i].r * out[i].r + out[i].i * out[i].i);
         }
     } else {
-        std::cout << "ceps" << std::endl;
         kiss_fft_cpx fft[FRAMES] = {};
         kiss_fft(cfg, in, fft);
         for (int i = 0; i < FRAMES/2; i++) {
