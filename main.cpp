@@ -136,7 +136,7 @@ BeatDetektor *bd;
 float reactive_frequency;
 bool inverted = false;
 
-std::vector<glm::vec2> svg_points;
+std::vector<glm::vec2> svg_points, svg_normals;
 
 cv::UMat u1, u2, u3;
 
@@ -680,10 +680,18 @@ std::vector<float> create_vbo(std::vector<float> frequencies, float range) {
             vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
         }
     } else if (mode == OUTLINE) {
-        for (int i = 0; i < NUM_POINTS; i++) {
-            if (i < svg_points.size()) {
-                float pct_frq = g(float(i) / float(NUM_POINTS));
-                float vert[VERT_LENGTH] = {svg_points[i].x, svg_points[i].y, 0, frequencies[i], pct_frq};
+        for (int j = 0; j < svg_points.size(); j++) {
+            if (j < svg_points.size()) {
+                float i_pct = f((float)j / (float)svg_points.size());
+                int i = (i_pct) * NUM_POINTS;
+
+                //float window = svg_points.size() / NUM_POINTS;
+
+                float pct_frq = g(i_pct);
+
+                glm::vec2 p = svg_points[j] + (svg_points[j] + svg_normals[j]) * (frequencies[i] * sensitivity * 0.1f);
+
+                float vert[VERT_LENGTH] = {p.x * inner_radius, -p.y * inner_radius, 0, frequencies[i], pct_frq};
                 vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
             }
         }
@@ -713,6 +721,9 @@ void main_draw(std::vector<float> vertices) {
 		glDrawArrays(GL_POINTS, 0, NUM_POINTS);
 	} else if (mode == CIRCLE_FLAT) {
 		glDrawArrays(GL_TRIANGLES, 0, NUM_POINTS * 3);
+	} else if (mode == OUTLINE) {
+		glDrawArrays(GL_LINE_STRIP, 0, svg_points.size());
+		glDrawArrays(GL_POINTS, 0, svg_points.size());
 	} else {
 		if (mode == SPHERE) {
 			glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, SPHERE_LAYERS * NUM_POINTS);
@@ -812,13 +823,13 @@ void Render() {
 		if (stereo_mode == 1)
 		{
 			glEnable(GL_BLEND);
-			main_draw(create_vbo(left_frequencies, 1.0));
 			main_draw(create_vbo(right_frequencies, 1.0));
+			main_draw(create_vbo(left_frequencies, 1.0));
 			glDisable(GL_BLEND);
 		} else {
 			glEnable(GL_BLEND);
-			main_draw(create_vbo(left_frequencies, 0.5));
-			main_draw(create_vbo(right_frequencies, -0.5));
+			main_draw(create_vbo(right_frequencies, 0.5));
+			main_draw(create_vbo(left_frequencies, -0.5));
 			glDisable(GL_BLEND);
 		}
 		
@@ -890,10 +901,16 @@ int main() {
 
     std::ifstream f("../outlines/data.json");
     json data = json::parse(f);
-    for (auto d : data) {
+    for (auto d : data["points"]) {
         std::cout << d.dump() << std::endl;
         svg_points.push_back(glm::vec2(d[0], d[1]));
     }
+    svg_points.push_back(svg_points.front());
+    for (auto d : data["normals"]) {
+        std::cout << d.dump() << std::endl;
+        svg_normals.push_back(glm::vec2(d[0], d[1]));
+    }
+    svg_normals.push_back(svg_normals.front());
 
     while (!glfwWindowShouldClose(window)) {
         Render();
