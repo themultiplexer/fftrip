@@ -95,6 +95,7 @@ float sensitivity = 1.0;
 float zoom_sensitivity = 0.5;
 float line_width = 10.0;
 float inner_radius = 1.0;
+float y_offset = 0.0;
 float radius = 0.5f;
 
 bool post_processing_enabled = true;
@@ -134,7 +135,8 @@ double lastBeat;
 bool beat = false;
 BeatDetektor *bd;
 float reactive_frequency;
-bool inverted = false;
+bool invertedBackground = false;
+bool invertedDisplacement = false;
 
 std::vector<glm::vec2> svg_points, svg_normals;
 
@@ -152,7 +154,7 @@ cv::UMat effect1(cv::UMat img) {
     cv::dilate(rot, rot, element);
     cv::UMat test2, image2;
 
-    if (inverted) {
+    if (invertedBackground) {
         test2 = rot(cv::Rect(zx * zoom_speed, zy * zoom_speed, screen_width - 2 * zx * zoom_speed, screen_height - 2 * zy * zoom_speed));
         image2 = cv::UMat(screen_height, screen_width, CV_8UC4);
         cv::resize(test2, image2, cv::Size(screen_width, screen_height));
@@ -189,7 +191,7 @@ cv::UMat effect3(cv::UMat img) {
     // cv::warpAffine(img, img, matRotation, img.size());
 
     cv::UMat test1, test2;
-    if (inverted) {
+    if (invertedBackground) {
         test2 = img(cv::Rect(zx * zoom_speed, zy * zoom_speed, screen_width - 2 * zx * zoom_speed, screen_height - 2 * zy * zoom_speed));
     } else {
         cv::resize(img, test1, cv::Size(screen_width - 32, screen_height - 18), 0.1, 0.1);
@@ -396,6 +398,8 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
         } else if (key == GLFW_KEY_T) {
             mode = VisMode::TEXT;
         } else if (key == GLFW_KEY_I) {
+            invertedDisplacement = !invertedDisplacement;
+        } else if (key == GLFW_KEY_Y) {
             load_font();
         } else if (key == GLFW_KEY_U) {
             mode = VisMode::OUTLINE;
@@ -408,7 +412,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
         } else if (key == GLFW_KEY_Z) {
             reactive_zoom_enabled = !reactive_zoom_enabled;
         } else if (key == GLFW_KEY_K) {
-            inverted = !inverted;
+            invertedBackground = !invertedBackground;
         } else if (key == GLFW_KEY_G) {
             aanalyzer->ceps = !aanalyzer->ceps;
         }else if (key == GLFW_KEY_D) {
@@ -627,9 +631,14 @@ std::vector<float> create_vbo(std::vector<float> frequencies, float range) {
     } else if (mode == CIRCLE) {
         for (int i = 0; i < NUM_POINTS; i++) {
             float pct_frq = g(float(i) / float(NUM_POINTS));
-            float theta = -2.0f * range *  M_PI * pct_frq - M_PI_2;
-            //float r = frequencies[i] * sensitivity + inner_radius;
-            float r = inner_radius - frequencies[i] * sensitivity;
+            float theta = -2.0f * range * M_PI * pct_frq - M_PI_2;
+
+            float r = 0.0;
+            if (invertedDisplacement) {
+                r = inner_radius - frequencies[i] * sensitivity;
+            } else {
+                r = frequencies[i] * sensitivity + inner_radius;
+            }
 
             float x = radius * r * cosf(theta);
             float y = radius * r * sinf(theta);
@@ -680,19 +689,26 @@ std::vector<float> create_vbo(std::vector<float> frequencies, float range) {
             vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
         }
     } else if (mode == OUTLINE) {
+        int last = -1;
         for (int j = 0; j < svg_points.size(); j++) {
             if (j < svg_points.size()) {
                 float i_pct = f((float)j / (float)svg_points.size());
                 int i = (i_pct) * NUM_POINTS;
-
+                printf("%d\n", i);
+                float displacement = (frequencies[i] * sensitivity * 0.05f);
+                if (i == last) {
+                    //displacement = 0.0;
+                }
+                if (invertedDisplacement) {
+                    displacement = -displacement;
+                }
                 //float window = svg_points.size() / NUM_POINTS;
-
                 float pct_frq = g(i_pct);
-
-                glm::vec2 p = svg_points[j] + (svg_points[j] + svg_normals[j]) * (frequencies[i] * sensitivity * 0.1f);
-
-                float vert[VERT_LENGTH] = {p.x * inner_radius, -p.y * inner_radius, 0, frequencies[i], pct_frq};
+                glm::vec2 p = svg_points[j] + (svg_points[j] + svg_normals[j]) * displacement;
+                float vert[VERT_LENGTH] = {p.x * inner_radius, -p.y * inner_radius + y_offset, 0, frequencies[i], pct_frq};
                 vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
+                
+                last = i;
             }
         }
     }
@@ -756,6 +772,9 @@ void Render() {
     glClear(GL_COLOR_BUFFER_BIT);
 
     double currentTime = glfwGetTime();
+    //inner_radius = sin(currentTime * 5.0) * 1.0 + 3.0;
+    //y_offset = sin(currentTime * 5.0) * 1.0;
+
     nbFrames++;
     if (currentTime - lastTime >= 1.0) {
         // printf("%f ms/frame\n", 1000.0 / double(nbFrames));
