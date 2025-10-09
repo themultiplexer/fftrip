@@ -16,7 +16,7 @@ public:
 
     std::vector<float> getLeftFrequencies();
     std::vector<float> getRightFrequencies();
-    bool ceps;
+
 protected:
     static int static_record(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames, double streamTime, unsigned int status, void *userData);
 private:
