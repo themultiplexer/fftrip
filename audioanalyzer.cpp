@@ -25,7 +25,7 @@ void AudioAnalyzer::startRecording() {
     streamOptions.numberOfBuffers = 4;
     //streamOptions.flags = RTAUDIO_NONINTERLEAVED;
 
-    unsigned int sampleRate = 44100;
+    unsigned int sampleRate = 48000;
     unsigned int bufferFrames = FRAMES;
 
 #ifdef _WIN32

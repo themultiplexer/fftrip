@@ -33,11 +33,13 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <thread>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include "audioanalyzer.h"
 #include "colors.h"
 #include "font_rendering.h"
+
 
 using namespace std::chrono;
 namespace fs = std::filesystem;
@@ -174,13 +176,14 @@ bool beat = false;
 float reactive_frequency;
 float thresh = 0.5;
 
+static double gamma1 = 0.0;
 
 std::vector<glm::vec2> svg_points, svg_normals;
 
-cv::UMat raw_mat, mixed_mat, temp_mixed_mat;
+cv::UMat raw_mat, mixed_mat, inter_mat, temp_mixed_mat;
 
 cv::UMat effect1(cv::UMat img) {
-    cv::addWeighted(img, 0.0, img, 0.9 - reactive_frequency * 0.001, 0.0, img);
+    cv::addWeighted(img, 0.0, img, 0.9 - reactive_frequency * 0.001, gamma1, img);
     cv::blur(img, img, cv::Size(10, 10));
     
     cv::UMat rot;
@@ -206,7 +209,7 @@ cv::UMat effect1(cv::UMat img) {
 }
 
 cv::UMat effect2(cv::UMat img) {
-    cv::addWeighted(img, 0.0, img, 0.9 - reactive_frequency * 0.001, 0.0, img);
+    cv::addWeighted(img, 0.0, img, 0.9 - reactive_frequency * 0.001, gamma1, img);
     cv::blur(img, img, cv::Size(10, 10));
     cv::UMat rot;
     cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
@@ -222,7 +225,7 @@ cv::UMat effect2(cv::UMat img) {
 
 cv::UMat effect3(cv::UMat img) {
     cv::blur(img, img, cv::Size(10, 10));
-    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
+    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, gamma1, img);
     cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
     cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
     cv::warpAffine(img, img, matRotation, img.size());
@@ -243,7 +246,7 @@ cv::UMat effect3(cv::UMat img) {
 
 cv::UMat effect4(cv::UMat img) {
     cv::blur(img, img, cv::Size(10, 10));
-    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
+    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, gamma1, img);
     cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
     cv::UMat rot;
     cv::Mat trans_mat = (cv::Mat_<double>(2, 3) << 1, 0, 0, 0, 1, -20);
@@ -258,7 +261,7 @@ cv::UMat effect4(cv::UMat img) {
 
 cv::UMat effect5(cv::UMat img) {
     cv::blur(img, img, cv::Size(20, 20));
-    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
+    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, gamma1, img);
     cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
     //cv::Mat matRotation = cv::getRotationMatrix2D( center, angle , 1.0 );
     // cv::warpAffine(img, img, matRotation, img.size());
@@ -272,7 +275,7 @@ cv::UMat effect5(cv::UMat img) {
 
 cv::UMat effect6(cv::UMat img) {
     cv::blur(img, img, cv::Size(20, 20));
-    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
+    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, gamma1, img);
     cv::UMat test2 = img(cv::Rect(zx * zoom_speed, zy * zoom_speed, screen_width - 2 * zx * zoom_speed, screen_height - 2 * zy * zoom_speed));
     cv::UMat image2 = cv::UMat(screen_height, screen_width, CV_8UC4);
     cv::resize(test2, image2, cv::Size(screen_width, screen_height));
@@ -280,7 +283,7 @@ cv::UMat effect6(cv::UMat img) {
 }
 
 cv::UMat effect7(cv::UMat img) {
-    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
+    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, gamma1, img);
     cv::Point2f center((img.cols - 1) / 2.0, (img.rows - 1) / 2.0);
     cv::UMat test2 = img(cv::Rect(zx * zoom_speed, zy * zoom_speed, screen_width - 2 * zx * zoom_speed, screen_height - 2 * zy * zoom_speed));
     cv::Mat eelement = getStructuringElement(cv::MORPH_RECT, cv::Size(2 * dilation_size + 1, 2 * dilation_size + 1), cv::Point(dilation_size, dilation_size));
@@ -294,7 +297,7 @@ cv::UMat effect7(cv::UMat img) {
 
 cv::UMat effect8(cv::UMat img) {
     cv::blur(img, img, cv::Size(20, 20));
-    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
+    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, gamma1, img);
     auto image_rect = cv::Rect({}, img.size());
     auto roi = cv::Rect(zx, zy, screen_width, screen_height + 2 * zy * zoom_speed);
     auto intersection = image_rect & roi;
@@ -308,13 +311,13 @@ cv::UMat effect8(cv::UMat img) {
 
 cv::UMat effect9(cv::UMat img) {
     cv::blur(img, img, cv::Size(20, 20));
-    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
+    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, gamma1, img);
     return img;
 }
 
 cv::UMat effect10(cv::UMat img) {
     cv::blur(img, img, cv::Size(20, 20));
-    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, 0.0, img);
+    cv::addWeighted(img, 0.0, img, 0.98 - reactive_frequency * 0.001, gamma1, img);
     cv::UMat test = cv::UMat(screen_height - 2 * zy * zoom_speed, screen_width, CV_8UC4);
     cv::resize(img, test, cv::Size(screen_width, screen_height - 2 * zy * zoom_speed));
     auto image_rect = cv::Rect({}, test.size());
@@ -482,6 +485,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
             camera_lookat = glm::make_vec3(current_preset.camera_lookat.data());
             set_camera(camera_center, camera_lookat);
             effect = effects[current_preset.effect_mode];
+            mixed_mat = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);;
         } else if (key == GLFW_KEY_B) {
             current_preset.background_mode = (BackgroundMode)(current_preset.background_mode + 1);
             current_preset.background_mode = (BackgroundMode)(current_preset.background_mode % 3);
@@ -558,6 +562,8 @@ bool Initialize() {
     load_background();
 
     mixed_mat = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);
+    temp_mixed_mat = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);
+    inter_mat = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);
     image = cv::Mat(screen_height, screen_width, CV_8UC4);
 
     start = system_clock::now();
@@ -770,6 +776,19 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, float range) 
 	return vertices;
 }
 
+void limitFramerate(double targetFPS)
+{
+    static auto lastFrame = std::chrono::high_resolution_clock::now();
+    using namespace std::chrono;
+    auto now = high_resolution_clock::now();
+    auto frameTime = duration<double>(now - lastFrame);
+    auto targetTime = duration<double>(1.0 / targetFPS);
+
+    if (frameTime < targetTime)
+        std::this_thread::sleep_for(targetTime - frameTime);
+
+    lastFrame = high_resolution_clock::now();
+}
 
 void main_draw(std::vector<float> vertices) {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -864,25 +883,46 @@ void render(bool to_buffer){
 
     if (current_preset.color_mode == 2) {
         int freq_index = std::distance(std::begin(left_frequencies), std::max_element(std::begin(left_frequencies), std::end(left_frequencies)));
-        int log_freq_index = ((float)freq_index / (float)NUM_POINTS);
-        rgb rgbcolor = hsv2rgb(hsv{log_freq_index * 360.0, 1.0 - log_freq_index, 1.0});
+        float log_freq_index = ((float)freq_index / (float)NUM_POINTS);
+        rgb rgbcolor = hsv2rgb(hsv{log_freq_index * 180.0, 1.0 - log_freq_index, 1.0});
         color[0] = rgbcolor.r;
         color[1] = rgbcolor.g;
         color[2] = rgbcolor.b;
+    } else if (current_preset.color_mode == 2) {
+        if (color_cycle == 0) {
+            color[0] = 1.0;
+            color[1] = 0.0;
+            color[2] = 0.0;
+        } else if (color_cycle == 1) {
+            color[0] = 0.0;
+            color[1] = 1.0;
+            color[2] = 0.0;
+        } else {
+            color[0] = 0.0;
+            color[1] = 0.0;
+            color[2] = 1.0;
+        }
+
+        color_cycle += 1;
+        color_cycle %= 3;
     } else if (current_preset.color_mode == 3) {
         if (beat) {
             if (color_cycle == 0) {
                 color[0] = 1.0;
                 color[1] = 0.0;
                 color[2] = 0.0;
-            } else {
+            } else if (color_cycle == 1) {
                 color[0] = 0.0;
                 color[1] = 1.0;
                 color[2] = 0.0;
+            } else {
+                color[0] = 0.0;
+                color[1] = 0.0;
+                color[2] = 1.0;
             }
 
             color_cycle += 1;
-            color_cycle %= 2;
+            color_cycle %= 3;
         }
     }
 
@@ -895,24 +935,18 @@ void render(bool to_buffer){
         glUniform1f(glGetUniformLocation(font_program, "volume"), (float)left_frequencies[0]);
         glUseProgram(0);
         glEnable(GL_BLEND);
-        RenderText(font_program, std::to_string(time), -2.0f, -0.5f, 0.005f, glm::vec3(color[0], color[1], color[2]));
+        RenderText(font_program, std::to_string(time), -2.0f, -0.5f, 0.001f, glm::vec3(color[0], color[1], color[2]));
         glDisable(GL_BLEND);
     } else {
 		if (current_preset.stereo_mode == 0) {
-            glEnable(GL_BLEND);
 			main_draw(create_vbo(right_frequencies, 0.5));
 			main_draw(create_vbo(left_frequencies, -0.5));
-			glDisable(GL_BLEND);
 		} else if (current_preset.stereo_mode == 1) {
-			glEnable(GL_BLEND);
 			main_draw(create_vbo(right_frequencies, 1.0));
 			main_draw(create_vbo(left_frequencies, 1.0));
-			glDisable(GL_BLEND);
 		} else {
-			glEnable(GL_BLEND);
 			main_draw(create_vbo(left_frequencies, 0.5));
 			main_draw(create_vbo(left_frequencies, -0.5));
-			glDisable(GL_BLEND);
 		}
     }
     if (to_buffer) {
@@ -941,13 +975,14 @@ void main_loop() {
         render(true);
         
         cv::ogl::convertFromGLTexture2D(texture, raw_mat);
-        cv::add(raw_mat, effect(mixed_mat), mixed_mat);
+        cv::add(raw_mat, mixed_mat, mixed_mat);
         //cv::subtract(mixed_mat, raw_mat, mixed_mat);
-        mixed_mat.copyTo(temp_mixed_mat);
+        mixed_mat = effect(mixed_mat);
         //cv::subtract(temp_mixed_mat, raw_mat, temp_mixed_mat);
         if ((current_preset.background_mode == 1 || (current_preset.background_mode == 2 && beat)) && current_preset.mode != TEXT) {
-            cv::add(mixed_mat, background, temp_mixed_mat);
+            cv::add(mixed_mat, background, mixed_mat);
         }
+        cv::add(raw_mat, mixed_mat, temp_mixed_mat);
         cv::ogl::convertToGLTexture2D(temp_mixed_mat, texture);
 
         glUseProgram(pixel_program);
@@ -998,7 +1033,7 @@ int main() {
         glfwSetWindowMonitor(window, glfwGetPrimaryMonitor(), 0, 0, screen_width, screen_height, mode->refreshRate);
     }
 
-    glfwSwapInterval(1); // Disable vsync
+    glfwSwapInterval(0); // Disable vsync
     glfwSetKeyCallback(window, key_callback);
     glfwSetFramebufferSizeCallback(window, resize);
     glewInit();
@@ -1035,8 +1070,10 @@ int main() {
     while (!glfwWindowShouldClose(window)) {
         loop_key_check();
         main_loop();
+        cv::ocl::finish();
         glfwSwapBuffers(window);
         glfwPollEvents();
+        limitFramerate(120.0);
     }
 
     if (adc.isStreamRunning()) {

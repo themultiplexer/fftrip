@@ -20,9 +20,9 @@ void main() {
         gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0) + 0.5f * vec4(vec3(vol), 1.0);
     }
     else if (color_mode == 2) {
-        gl_FragColor = color + 0.1f * vec4(vec3(vol), 1.0);
+        gl_FragColor = color;
     }
     else if (color_mode == 3) {
-        gl_FragColor = color + 0.5f * vec4(vec3(vol), 1.0);
+        gl_FragColor = color;
     }
 }
