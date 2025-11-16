@@ -2,6 +2,9 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GLFW/glfw3.h>
+#include <cmath>
+#include <glm/fwd.hpp>
+#include <glm/geometric.hpp>
 #include <opencv2/core/hal/interface.h>
 #include <cstdio>
 #include <cstring>
@@ -35,6 +38,7 @@
 #include <array>
 #include <thread>
 #include <fstream>
+#include <ranges>
 #include <nlohmann/json.hpp>
 #include "audioanalyzer.h"
 #include "colors.h"
@@ -70,6 +74,7 @@ enum BackgroundMode {
 struct Preset {
     VisMode mode;
     BackgroundMode background_mode;
+    int id;
     int effect_mode;
     int color_mode;
     int stereo_mode;
@@ -77,6 +82,7 @@ struct Preset {
     bool inverted_background;
     bool inverted_displacement;
     bool inverted_direction;
+    bool rotate_camera;
     bool move_to_beat;
     float sensitivity = 0.25;
     float zoom_sensitivity = 0.5;
@@ -104,6 +110,8 @@ void to_json(json& j, const Preset& p) {
     {"inverted_direction", p.inverted_direction},
     {"move_to_beat", p.move_to_beat},
     {"reactive_zoom_enabled", p.reactive_zoom_enabled},
+    {"rotate_camera", p.rotate_camera},
+    {"id", p.id}
     };
 }
 
@@ -124,6 +132,8 @@ void from_json(const json& j, Preset& p) {
     j.at("inverted_direction").get_to(p.inverted_direction);
     j.at("move_to_beat").get_to(p.move_to_beat);
     j.at("reactive_zoom_enabled").get_to(p.reactive_zoom_enabled);
+    j.at("rotate_camera").get_to(p.rotate_camera);
+    j.at("id").get_to(p.id);
 }
 
 GLFWwindow *window;
@@ -145,6 +155,8 @@ unsigned int screen_width = 3840;
 unsigned int screen_height = 2160;
 float cam_speed = 0.004;
 
+bool font_loaded;
+
 glm::vec3 initial_camera_center(0.0f, -0.01f, 1.0f);
 glm::vec3 initial_camera_lookat(0.0f, 0.0f, 0.0f);
 
@@ -152,8 +164,7 @@ glm::vec3 camera_center = initial_camera_center;
 glm::vec3 camera_lookat = initial_camera_lookat;
 
 std::array<float, 1024> left_frequencies, right_frequencies;
-double lastTime = glfwGetTime();
-int nbFrames = 0;
+
 int current_file_index = 0;
 int current_font_index = 0;
 int zx = 38;
@@ -164,6 +175,7 @@ float angle = 0.4f;
 float y_offset = 0.0;
 float radius = 0.5f;
 float inner_radius = 0.5f;
+double rotation = 0.0f;
 
 bool post_processing_enabled = true;
 bool dynamic_color = false;
@@ -171,16 +183,21 @@ float cur = 0.0;
 float zoom_speed;
 system_clock::time_point start;
 
+float effect_transition = 0.0;
+
 cv::Mat image;
-GLfloat color[4] = {1.0, 0.0, 0.0, 1.0};
+glm::vec4 color = {1.0, 0.0, 0.0, 1.0};
 
 std::array<Preset, 10> presets;
 
 int current_preset_index = 0;
 Preset current_preset = { CIRCLE, OFF, 0, 0 };
+Preset next_preset = current_preset;
 int color_cycle = 0;
 
 std::chrono::time_point<std::chrono::steady_clock> last_beat;
+auto last_frame = std::chrono::high_resolution_clock::now();
+
 double lastBeat;
 bool beat = false;
 float reactive_frequency;
@@ -411,38 +428,65 @@ static void set_camera(glm::vec3 cam, glm::vec3 target = glm::vec3(0.0, 0.0, 0.0
         GLint uniView = glGetUniformLocation(programs[i], "view");
         glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-        glm::mat4 proj = glm::perspective(glm::radians(45.0f), (float)screen_width / (float)screen_height, 0.1f, 40.0f);
+        glm::mat4 proj = glm::perspective(glm::radians(60.0f), (float)screen_width / (float)screen_height, 0.1f, 40.0f);
         GLint uniProj = glGetUniformLocation(programs[i], "proj");
         glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+        glUseProgram(0);
     }
 }
 
+
+glm::vec2 lerp(glm::vec2 p1, glm::vec2 p2, double t) {
+    // Ensure t is between 0 and 1
+    if (t < 0.0) t = 0.0;
+    if (t > 1.0) t = 1.0;
+
+    glm::vec2 interpolated_point;
+    interpolated_point.x = p1.x * (1.0 - t) + p2.x * t;
+    interpolated_point.y = p1.y * (1.0 - t) + p2.y * t;
+    return interpolated_point;
+}
+
+glm::vec3 lerp(glm::vec3 p1, glm::vec3 p2, double t) {
+    // Ensure t is between 0 and 1
+    if (t < 0.0) t = 0.0;
+    if (t > 1.0) t = 1.0;
+
+    glm::vec3 interpolated_point;
+    interpolated_point.x = p1.x * (1.0 - t) + p2.x * t;
+    interpolated_point.y = p1.y * (1.0 - t) + p2.y * t;
+    interpolated_point.z = p1.z * (1.0 - t) + p2.z * t;
+    return interpolated_point;
+}
+
+/* High frequency key check */
 void loop_key_check() {
     bool w = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
     bool a = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
     bool s = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
     bool d = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
     if (w) {
-        camera_center += glm::vec3(0.0f, cam_speed, 0.0f);
-        camera_lookat += glm::vec3(0.0f, cam_speed, 0.0f);
+        camera_center += glm::vec3(0.0f, -cam_speed, 0.0f);
+        camera_lookat += glm::vec3(0.0f, -cam_speed, 0.0f);
     }
     if (a) {
-        camera_center += glm::vec3(-cam_speed, 0.0f, 0.0f);
-        camera_lookat += glm::vec3(-cam_speed, 0.0f, 0.0f);
-    }
-    if (s) {
-        camera_center += glm::vec3(0.0f, -cam_speed, 0.0f);
-        camera_lookat += glm::vec3(0.0f,-cam_speed, 0.0f);
-    }
-    if (d) {
         camera_center += glm::vec3(cam_speed, 0.0f, 0.0f);
         camera_lookat += glm::vec3(cam_speed, 0.0f, 0.0f);
+    }
+    if (s) {
+        camera_center += glm::vec3(0.0f,cam_speed, 0.0f);
+        camera_lookat += glm::vec3(0.0f,cam_speed, 0.0f);
+    }
+    if (d) {
+        camera_center += glm::vec3(-cam_speed, 0.0f, 0.0f);
+        camera_lookat += glm::vec3(-cam_speed, 0.0f, 0.0f);
     }
     if (w || a || s || d) {
         set_camera(camera_center, camera_lookat);
     }
 }
 
+/* Check keys on key changed event */
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         if (key == GLFW_KEY_ESCAPE) {
@@ -460,12 +504,20 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
             effect = effects[current_preset.effect_mode];
         } else if (key == GLFW_KEY_P) {
             post_processing_enabled = !post_processing_enabled;
+        }  else if (key == GLFW_KEY_T) {
+            current_preset.rotate_camera = !current_preset.rotate_camera;
         } else if (key == GLFW_KEY_F) {
-            current_preset.mode = (VisMode)(current_preset.mode + 1);
-            current_preset.mode = (VisMode)(current_preset.mode % 7);
+            next_preset = current_preset;
+            next_preset.mode = (VisMode)(next_preset.mode + 1);
+            next_preset.mode = (VisMode)(next_preset.mode % 7);
+
+            if (next_preset.effect_mode != TEXT) {
+                next_preset.id = current_preset.id + 1;
+                effect_transition = 0.0;
+            }
         } else if (key == GLFW_KEY_R) {
-            camera_center = initial_camera_center;
-            camera_lookat = initial_camera_lookat;
+            camera_center = glm::make_vec3(current_preset.camera_center.data());
+            camera_lookat = glm::make_vec3(current_preset.camera_lookat.data());
             set_camera(camera_center, camera_lookat);
         } else if (key == GLFW_KEY_Z) {
             current_preset.reactive_zoom_enabled = !current_preset.reactive_zoom_enabled;
@@ -493,13 +545,15 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
             }
         } else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) {
             int index = (key - GLFW_KEY_0);
-            current_preset = presets[index];
+            next_preset = presets[index];
             current_preset_index = index;
-            camera_center = glm::make_vec3(current_preset.camera_center.data());
-            camera_lookat = glm::make_vec3(current_preset.camera_lookat.data());
-            set_camera(camera_center, camera_lookat);
-            effect = effects[current_preset.effect_mode];
-            mixed_mat = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);;
+            
+            mixed_mat = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);
+
+            if (next_preset.mode == TEXT || current_preset.mode == TEXT) {
+                current_preset = next_preset;
+            }
+            effect_transition = 0.0;
         } else if (key == GLFW_KEY_B) {
             current_preset.background_mode = (BackgroundMode)(current_preset.background_mode + 1);
             current_preset.background_mode = (BackgroundMode)(current_preset.background_mode % 3);
@@ -623,8 +677,7 @@ bool Initialize() {
 
         GLenum status;
         if ((status = glCheckFramebufferStatus(GL_FRAMEBUFFER)) != GL_FRAMEBUFFER_COMPLETE) {
-            fprintf(stderr, "glCheckFramebufferStatus: error %p",
-                    glewGetErrorString(status));
+            fprintf(stderr, "glCheckFramebufferStatus: error %p", glewGetErrorString(status));
             return 0;
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -682,47 +735,52 @@ static float g(float x) {
     return log(x * (base - 1.0) + 1.0) / log(base);
 }
 
-std::vector<float> create_vbo(std::array<float, 1024> frequencies, float from, float to, float offset, float sign) {
+std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 from, glm::vec2 to, float sign, Preset preset) {
     std::vector<float> vertices;
 
-    float range = to - from;
+    glm::vec2 vec = from - to;
+    float norm = glm::length(vec);
 
-    if (current_preset.mode == LINES) {
+    if (preset.mode == LINES) {
         for (int i = 0; i < NUM_POINTS; i++) {
-            float pct_frq = g((float)(i) / (float)NUM_POINTS);
+            float pct_frq = g((float)i / float(NUM_POINTS));
+            float pct_frq2 = g((float)i / (float)NUM_POINTS);
             std::vector<float> vert;
+            glm::vec2 p = lerp(from, to, pct_frq);
+            
+            p = p + glm::vec2(vec.y / norm, -vec.x / norm) * (frequencies[i] * preset.sensitivity * sign);
+            vert = {p.x, p.y, 0.0, frequencies[i], pct_frq2};
 
-            vert = {static_cast<float>(range * (pct_frq) + from), frequencies[i] * current_preset.sensitivity * sign + offset, 0.0, frequencies[i], pct_frq};
             vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
         }
-    } else if (current_preset.mode == CIRCLE) {
+    } else if (preset.mode == CIRCLE) {
         for (int i = 0; i < NUM_POINTS; i++) {
-            float pct_frq = g(float(i) / float(NUM_POINTS));
-            float theta = range * M_PI * pct_frq - M_PI_2;
+            float pct_frq = g((float)i / float(NUM_POINTS));
+            float theta = glm::distance(from, to) * M_PI * pct_frq;
 
             float r = sign * frequencies[i] * current_preset.sensitivity - inner_radius;
 
-            float x = radius * r * cosf(theta);
-            float y = radius * r * sinf(theta);
+            float x = preset.inner_radius * r * cosf(theta);
+            float y = preset.inner_radius * r * sinf(theta);
 
             float vert[VERT_LENGTH] = {x, y, 0.0, frequencies[i], pct_frq};
             vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
         }
-    } else if (current_preset.mode == CIRCLE_FLAT) {
-        for (int i = 0; i < NUM_POINTS; i++) {
-            float theta1 = 2.0f * M_PI * float(i) / float(NUM_POINTS) - M_PI;
-            float theta2 = 2.0f * M_PI * float(i + 1) / float(NUM_POINTS) - M_PI;
-            //float r = frequencies[i] * sensitivity + inner_radius;
-            float r = inner_radius - frequencies[i] * current_preset.sensitivity;
+    } else if (preset.mode == CIRCLE_FLAT) {
+        const float goldenAngle = M_PI * (3.0f - std::sqrt(5.0f)); // ≈ 137.50776°
 
-            float c[VERT_LENGTH] = {0.0, 0.0, 0.0, 0.0, (float)i / NUM_POINTS};
-            vertices.insert(vertices.end(), std::begin(c), std::end(c));
-            float b[VERT_LENGTH] = {radius * r * sinf(theta2), radius * r * sinf(theta2), 0.0, 0.0, (float)i / NUM_POINTS};
-            vertices.insert(vertices.end(), std::begin(b), std::end(b));
-            float a[VERT_LENGTH] = {radius * r * cosf(theta1), radius * r * sinf(theta1), 0.0, frequencies[i], (float)i / NUM_POINTS};
-            vertices.insert(vertices.end(), std::begin(a), std::end(a));
+        for (size_t i = 0; i < NUM_POINTS; ++i)
+        {
+            float r = std::sqrt(float(i));        // Fibonacci-style radial growth
+            float theta = i * goldenAngle;
+
+            float x = r * std::cos(theta);
+            float y = r * std::sin(theta);
+
+            float vert[VERT_LENGTH] = {x*0.05f, y*0.05f, 0.0, frequencies[i], (float)i / NUM_POINTS};
+            vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
         }
-    } else if (current_preset.mode == SPHERE) {
+    } else if (preset.mode == SPHERE) {
         for (int c = 0; c < SPHERE_LAYERS; c++) {
             for (int i = 0; i < NUM_POINTS; i++) {
                 float pct_frq = g(float(i) / float(NUM_POINTS));
@@ -737,7 +795,7 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, float from, f
                 vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
             }
         }
-    } else if (current_preset.mode == SPHERE_SPIRAL) {
+    } else if (preset.mode == SPHERE_SPIRAL) {
         for (int i = 0; i < NUM_POINTS; i++) {
             float pct_frq = g(float(i) / float(NUM_POINTS));
             float theta = 5.0 * 2.0f * M_PI * pct_frq - M_PI;
@@ -747,10 +805,10 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, float from, f
             float x = radius * layer * r * cosf(theta);
             float y = radius * layer * r * sinf(theta);
 
-            float vert[VERT_LENGTH] = {x, pct_frq, y, frequencies[i], pct_frq};
+            float vert[VERT_LENGTH] = {x, pct_frq - 0.5f, y, frequencies[i], pct_frq};
             vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
         }
-    } else if (current_preset.mode == OUTLINE) {
+    } else if (preset.mode == OUTLINE) {
         int last = -1;
         for (int j = 0; j < svg_points.size(); j++) {
             if (j < svg_points.size()) {
@@ -773,18 +831,20 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, float from, f
 	return vertices;
 }
 
-void limitFramerate(double targetFPS)
-{
-    static auto lastFrame = std::chrono::high_resolution_clock::now();
+std::chrono::duration<double> get_relative_time() {
     using namespace std::chrono;
     auto now = high_resolution_clock::now();
-    auto frameTime = duration<double>(now - lastFrame);
+    auto frame_time = duration<double>(now - last_frame);
+    last_frame = high_resolution_clock::now();
+    return frame_time;
+}
+
+void limit_framerate(duration<double> frame_time, double targetFPS) {
     auto targetTime = duration<double>(1.0 / targetFPS);
 
-    if (frameTime < targetTime)
-        std::this_thread::sleep_for(targetTime - frameTime);
+    if (frame_time < targetTime)
+        std::this_thread::sleep_for(targetTime - frame_time);
 
-    lastFrame = high_resolution_clock::now();
 }
 
 void main_draw(std::vector<float> vertices) {
@@ -794,7 +854,7 @@ void main_draw(std::vector<float> vertices) {
 	// Use the shader program
 	glUseProgram(program);
 	glUniform1i(glGetUniformLocation(program, "color_mode"), current_preset.color_mode);
-	glUniform4fv(glGetUniformLocation(program, "color"), 1, color);
+	glUniform4fv(glGetUniformLocation(program, "color"), 1, glm::value_ptr(color));
 	// Bind vertex array object (VAO)
 	glBindVertexArray(vao);
 
@@ -802,21 +862,17 @@ void main_draw(std::vector<float> vertices) {
 	if (current_preset.mode == LINES) {
 		glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
 		glDrawArrays(GL_POINTS, 0, NUM_POINTS);
-	} else if (current_preset.mode == CIRCLE) {
+	} else if (current_preset.mode == CIRCLE || current_preset.mode == CIRCLE_FLAT) {
 		glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
 		glDrawArrays(GL_POINTS, 0, NUM_POINTS);
-	} else if (current_preset.mode == CIRCLE_FLAT) {
-		glDrawArrays(GL_TRIANGLES, 0, NUM_POINTS * 3);
 	} else if (current_preset.mode == OUTLINE) {
 		glDrawArrays(GL_LINE_STRIP, 0, svg_points.size());
 		glDrawArrays(GL_POINTS, 0, svg_points.size());
-	} else {
-		if (current_preset.mode == SPHERE) {
-			glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, SPHERE_LAYERS * NUM_POINTS);
-			glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
-		} else {
-			glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
-		}
+	} if (current_preset.mode == SPHERE) {
+        glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, SPHERE_LAYERS * NUM_POINTS);
+        glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
+    } else if (current_preset.mode == SPHERE_SPIRAL)  {
+        glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
 	}
 
 	// Unbind VAO and shader
@@ -866,7 +922,6 @@ void calc_audio(){
     }
 }
 
-
 void render(bool to_buffer){
     if (to_buffer) {
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -884,91 +939,119 @@ void render(bool to_buffer){
         color[1] = rgbcolor.g;
         color[2] = rgbcolor.b;
     } else if (current_preset.color_mode == 2) {
-        if (color_cycle >= 2) {
-            color[0] = 1.0;
-            color[1] = 0.0;
-            color[2] = 0.0;
-        } else if (color_cycle >= 1) {
-            color[0] = 0.0;
-            color[1] = 1.0;
-            color[2] = 0.0;
-        } else if (color_cycle >= 0) {
-            color[0] = 0.0;
-            color[1] = 0.0;
-            color[2] = 1.0;
-        }
-
-        color_cycle += 1;
-        color_cycle %= 3;
+            std::vector<glm::vec4> f = {{1.0, 0.0, 0.0, 1.0}, {0.0, 1.0, 0.0, 1.0}, {0.0, 0.0, 1.0, 1.0}};
+            color = f[color_cycle];
+            color_cycle += 1;
+            color_cycle %= 3;
     } else if (current_preset.color_mode == 3) {
         if (beat) {
-            if (color_cycle == 0) {
-                color[0] = 1.0;
-                color[1] = 0.0;
-                color[2] = 0.0;
-            } else if (color_cycle == 1) {
-                color[0] = 0.0;
-                color[1] = 1.0;
-                color[2] = 0.0;
-            } else if (color_cycle == 2) {
-                color[0] = 0.0;
-                color[1] = 0.0;
-                color[2] = 1.0;
-            }
-
+            std::vector<glm::vec4> f = {{1.0, 0.0, 0.0, 1.0}, {0.0, 1.0, 0.0, 1.0}, {0.0, 0.0, 1.0, 1.0}};
+            color = f[color_cycle];
             color_cycle += 1;
             color_cycle %= 3;
         }
     }
 
     long time = duration_cast<nanoseconds>(system_clock::now() - start).count();
-
-    if (current_preset.mode == TEXT) {
-        glUseProgram(font_program);
-        glUniform1f(glGetUniformLocation(font_program, "time"), (float)time);
-        glUniform1f(glGetUniformLocation(font_program, "width"), (float)current_preset.line_width);
-        glUniform1f(glGetUniformLocation(font_program, "volume"), (float)left_frequencies[0]);
-        glUseProgram(0);
-        glEnable(GL_BLEND);
-        RenderText(font_program, std::to_string(time), -2.0f, -0.5f, 0.001f, glm::vec3(color[0], color[1], color[2]));
-        glDisable(GL_BLEND);
-    } else {
-        float b = current_preset.inverted_displacement ? 1.0 : -1.0;
-        float s = current_preset.inverted_direction ? b : -b;
-        std::vector<std::vector<std::vector<float>>> main = {{{-1.0, 1.0, 0.1, b}},
-        {{-1.0, 1.0, 0.4, b}, {-1.0, 1.0, -0.4, s}}, 
-                                                    {{0.0, 1.0, 0.1, b}, {-1.0, 0.0, -0.1, -s}}, 
-                                                {{-1.0, 1.0, 0.1, b}, {-1.0, 1.0, -0.1, s}},
-                                                {{0.5, 1.0, 0.0, b}, {-0.5, 0.0, 0.0, s}}};
-        std::vector<std::vector<float>> m = main[current_preset.stereo_mode];
-
-        for (int i = 0; i < m.size(); i++) {
-            main_draw(create_vbo(i%2==0 ? left_frequencies : right_frequencies, m[i][0], m[i][1], m[i][2], m[i][3]));
+    
+    bool lerpit = false;
+    if (current_preset.id != next_preset.id) {
+        if (effect_transition <= 1.0) {
+            lerpit = true;
+            effect_transition += 0.01;
+        } else {
+            current_preset = next_preset;
+            camera_center = glm::make_vec3(current_preset.camera_center.data());
+            camera_lookat = glm::make_vec3(current_preset.camera_lookat.data());
+            set_camera(camera_center, camera_lookat);
+            effect = effects[current_preset.effect_mode];
+            last_frame = std::chrono::high_resolution_clock::now();
+            lerpit = false;
         }
     }
+
+    if (lerpit) {    
+        camera_center = lerp(glm::make_vec3(current_preset.camera_center.data()), glm::make_vec3(next_preset.camera_center.data()), effect_transition);
+        camera_lookat = lerp(glm::make_vec3(current_preset.camera_lookat.data()), glm::make_vec3(next_preset.camera_lookat.data()), effect_transition);
+        set_camera(camera_center, camera_lookat);
+    }
+
+    if (current_preset.mode == TEXT) {
+        if (!font_loaded) { 
+            LoadFontRendering(SHADER_PATH + std::string("fonts/DroidSansMono.ttf"));
+            font_loaded = true;
+        }
+        if (font_loaded) {        
+            glUseProgram(font_program);
+            glUniform1f(glGetUniformLocation(font_program, "time"), (float)time);
+            glUniform1f(glGetUniformLocation(font_program, "width"), (float)current_preset.line_width);
+            glUniform1f(glGetUniformLocation(font_program, "volume"), (float)left_frequencies[0]);
+            glUseProgram(0);
+            glEnable(GL_BLEND);
+            RenderText(font_program, std::to_string(time), -2.0f, -0.5f, 0.001f, glm::vec3(color[0], color[1], color[2]));
+            glDisable(GL_BLEND);
+        }
+    } else {
+
+        std::vector<std::vector<std::vector<glm::vec2>>> main = {
+                                                {{glm::vec2(-1.0, 0.0), glm::vec2(1.0, 0.0)}},
+                                                {{glm::vec2(-1.0, 0.5), glm::vec2(1.0, 0.5)},{glm::vec2(-1.0, -0.5), glm::vec2(1.0, -0.5)}, {glm::vec2(1.0, 0.45), glm::vec2(1.0, -0.45)}, {glm::vec2(-1.0, -0.45), glm::vec2(-1.0, 0.45)}}, 
+                                                {{glm::vec2(-1.0, 0.1), glm::vec2(0.0, 0.1)}, {glm::vec2(0.0, 0.1), glm::vec2(1.0, 0.1)}}, 
+                                                {{glm::vec2(-1.0, 0.1), glm::vec2(1.0, 0.1)}, {glm::vec2(-1.0, -0.1), glm::vec2(1.0, -0.1)}},
+                                                {{glm::vec2(-1.0, 0.1), glm::vec2(1.0, 0.1)}, {glm::vec2(-1.0, -0.1), glm::vec2(1.0, -0.1)}}
+                                            };
+        auto m = main[current_preset.stereo_mode];
+        auto n = main[next_preset.stereo_mode];
+
+        std::vector<std::vector<float>> vbos1;
+        for (int i = 0; i < m.size(); i++) {
+            float b = current_preset.inverted_displacement ? 1.0 : -1.0;
+            float s = current_preset.inverted_direction ? b : -b;
+            vbos1.push_back(create_vbo(i%2==0 ? left_frequencies : right_frequencies, m[i][0], m[i][1], i%2==0? b : s, current_preset));
+        }
+
+        std::vector<std::vector<float>> vbos2;
+        for (int i = 0; i < n.size(); i++) {
+            float b = next_preset.inverted_displacement ? 1.0 : -1.0;
+            float s = next_preset.inverted_direction ? b : -b;
+            vbos2.push_back(create_vbo(i%2==0 ? left_frequencies : right_frequencies, n[i][0], n[i][1], i%2==0? b : s, next_preset));
+        }
+
+        /* Here the transition (vertex interpolation) magic happens */
+        if(lerpit) {
+            for (int i = 0; i < std::max(vbos1.size(), vbos2.size()); i++) {
+                std::vector<float> from = vbos1[std::min(i, (int)vbos1.size()-1)];
+                std::vector<float> to = vbos2[std::min(i, (int)vbos2.size()-1)];
+                std::vector<float> out = std::vector<float>(std::max(from.size(), to.size()));
+                for (int i = 0; i < out.size(); i++) {
+                    out[i] = lerp(from[std::min(i, (int)from.size()-1)], to[std::min(i, (int)to.size()-1)], effect_transition);
+                }
+                main_draw(out);
+            }
+        } else {
+            for (int i = 0; i < vbos1.size(); i++) {
+                main_draw(vbos1[i]);
+            }
+        }
+    }
+
     if (to_buffer) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 }
 
-void main_loop() {
-    double currentTime = glfwGetTime();
+void main_loop(double current_time) {
+    calc_audio();
 
     if (false) {
-        inner_radius = sin(currentTime * 5.0) * 1.0 + 3.0;
-        y_offset = sin(currentTime * 5.0) * 1.0;
+        inner_radius = sin(current_time * 5.0) * 1.0 + 3.0;
+        y_offset = sin(current_time * 5.0) * 1.0;
     }
 
-    set_camera(camera_center, camera_lookat, currentTime);
-
-    nbFrames++;
-    if (currentTime - lastTime >= 1.0) {
-        // printf("%f ms/frame\n", 1000.0 / double(nbFrames));
-        nbFrames = 0;
-        lastTime += 1.0;
+    if (current_preset.rotate_camera) {
+        rotation += current_time;
+        set_camera(camera_center, camera_lookat, rotation);
     }
-
-    calc_audio();
 
     if (current_preset.move_to_beat) {
         if (current_preset.inverted_displacement) {
@@ -977,7 +1060,7 @@ void main_loop() {
             inner_radius = current_preset.inner_radius + reactive_frequency * 0.25;
         }
     } else if (false) {
-        inner_radius = current_preset.inner_radius + sin(currentTime * 5.0) * 0.1;
+        inner_radius = current_preset.inner_radius + sin(current_time * 5.0) * 0.1;
     } else {
         inner_radius = current_preset.inner_radius;
     }
@@ -1028,6 +1111,11 @@ int main() {
         std::cout << "Loaded people:\n";
     }
 
+    current_preset = presets[1];
+    next_preset = presets[1];
+    effect = effects[current_preset.effect_mode];
+    
+
     if (!glfwInit())
         exit(EXIT_FAILURE);
 
@@ -1062,10 +1150,6 @@ int main() {
         cv::ocl::setUseOpenCL(true);
     }
 
-    if (LoadFontRendering(SHADER_PATH + std::string("fonts/DroidSansMono.ttf"))) {
-        return -1;
-    }
-
     if (!Initialize()) {
         printf("Scene initialization failed.\n");
         return 1;
@@ -1082,12 +1166,24 @@ int main() {
     }
     svg_normals.push_back(svg_normals.front());
 
+    /* Not that easy:
+    std::thread t([](){
+        LoadFontRendering(SHADER_PATH + std::string("fonts/DroidSansMono.ttf"));
+        font_loaded = true;
+    });
+    */
+
+    camera_center = glm::make_vec3(current_preset.camera_center.data());
+    camera_lookat = glm::make_vec3(current_preset.camera_lookat.data());
+    set_camera(camera_center, camera_lookat);
+
     while (!glfwWindowShouldClose(window)) {
+        duration<float> f = get_relative_time();
         loop_key_check();
-        main_loop();
+        main_loop((double)std::chrono::duration_cast<milliseconds>(f).count() / 1000.0);
         glfwSwapBuffers(window);
         glfwPollEvents();
-        limitFramerate(120.0);
+        limit_framerate(f, 120.0);
     }
 
     if (adc.isStreamRunning()) {
