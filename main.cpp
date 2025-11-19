@@ -84,10 +84,10 @@ struct Preset {
     bool inverted_direction;
     bool rotate_camera;
     bool move_to_beat;
-    float sensitivity = 0.25;
-    float zoom_sensitivity = 0.5;
-    float line_width = 10.0;
-    float inner_radius = 0.5;
+    float sensitivity;
+    float zoom_sensitivity;
+    float line_width;
+    float inner_radius;
 
     std::array<float, 3> camera_center;
     std::array<float, 3> camera_lookat;
@@ -173,8 +173,8 @@ int dilation_size = 1;
 int erosion_size = 1;
 float angle = 0.4f;
 float y_offset = 0.0;
-float radius = 0.5f;
-float inner_radius = 0.5f;
+
+float radius_factor = 1.0f;
 double rotation = 0.0f;
 
 bool post_processing_enabled = true;
@@ -188,17 +188,20 @@ float effect_transition = 0.0;
 cv::Mat image;
 glm::vec4 color = {1.0, 0.0, 0.0, 1.0};
 
-std::array<Preset, 10> presets;
+std::vector<Preset> presets;
 
 int current_preset_index = 0;
 Preset current_preset = { CIRCLE, OFF, 0, 0 };
 Preset next_preset = current_preset;
 int color_cycle = 0;
 
-std::chrono::time_point<std::chrono::steady_clock> last_beat;
+std::chrono::time_point<std::chrono::steady_clock> last_beat, last_num_press;
 auto last_frame = std::chrono::high_resolution_clock::now();
 
-double lastBeat;
+bool wants_to_save = false;
+bool did_type_number = false;
+std::string typed_number = "";
+
 bool beat = false;
 float reactive_frequency;
 float thresh = 0.5;
@@ -531,29 +534,21 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
             current_preset.color_mode += 1;
             current_preset.color_mode %= 4;
         } else if (key == GLFW_KEY_C) {
-            current_preset.camera_center = {camera_center.x, camera_center.y, camera_center.z};
-            current_preset.camera_lookat = {camera_lookat.x, camera_lookat.y, camera_lookat.z};
-            presets[current_preset_index] = current_preset;
-            json j = presets;
-            std::ofstream outFile("presets.json");
-            if (outFile.is_open()) {
-                outFile << j.dump(4);
-                outFile.close();
-                std::cout << "Saved JSON to people.json\n";
-            } else {
-                std::cerr << "Failed to open file for writing\n";
-            }
+            wants_to_save = !wants_to_save;
         } else if (key >= GLFW_KEY_0 && key <= GLFW_KEY_9) {
-            int index = (key - GLFW_KEY_0);
-            next_preset = presets[index];
-            current_preset_index = index;
-            
-            mixed_mat = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);
+            std::string numbers = "0123456789";
+            auto now = std::chrono::steady_clock::now();
+            int last = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_num_press).count();
+            last_num_press = now;
 
-            if (next_preset.mode == TEXT || current_preset.mode == TEXT) {
-                current_preset = next_preset;
+            if (last < 400) {
+                typed_number += numbers[key - GLFW_KEY_0];
+            } else {
+                typed_number = numbers[key - GLFW_KEY_0];
             }
-            effect_transition = 0.0;
+
+            did_type_number = true;
+
         } else if (key == GLFW_KEY_B) {
             current_preset.background_mode = (BackgroundMode)(current_preset.background_mode + 1);
             current_preset.background_mode = (BackgroundMode)(current_preset.background_mode % 3);
@@ -749,6 +744,7 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
             glm::vec2 p = lerp(from, to, pct_frq);
             
             p = p + glm::vec2(vec.y / norm, -vec.x / norm) * (frequencies[i] * preset.sensitivity * sign);
+            p *= preset.inner_radius * radius_factor;
             vert = {p.x, p.y, 0.0, frequencies[i], pct_frq2};
 
             vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
@@ -758,10 +754,10 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
             float pct_frq = g((float)i / float(NUM_POINTS));
             float theta = glm::distance(from, to) * M_PI * pct_frq;
 
-            float r = sign * frequencies[i] * current_preset.sensitivity - inner_radius;
+            float r = (sign * frequencies[i] * current_preset.sensitivity) - (preset.inner_radius * radius_factor);
 
-            float x = preset.inner_radius * r * cosf(theta);
-            float y = preset.inner_radius * r * sinf(theta);
+            float x = preset.inner_radius * radius_factor * r * cosf(theta);
+            float y = preset.inner_radius * radius_factor * r * sinf(theta);
 
             float vert[VERT_LENGTH] = {x, y, 0.0, frequencies[i], pct_frq};
             vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
@@ -788,8 +784,8 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
 
                 float r = frequencies[i] * current_preset.sensitivity + 1.0;
                 float layer = sin(((float)c / (float)SPHERE_LAYERS) * M_PI);
-                float x = radius * 0.5 * layer * r * cosf(theta);
-                float y = radius * 0.5 * layer * r * sinf(theta);
+                float x = preset.inner_radius * radius_factor * layer * r * cosf(theta);
+                float y = preset.inner_radius * radius_factor * layer * r * sinf(theta);
 
                 float vert[VERT_LENGTH] = {x, c * 0.1f, y, frequencies[i], (float)i / NUM_POINTS};
                 vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
@@ -802,8 +798,8 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
 
             float r = frequencies[i] * current_preset.sensitivity + 1.0;
             float layer = sin(pct_frq * M_PI);
-            float x = radius * layer * r * cosf(theta);
-            float y = radius * layer * r * sinf(theta);
+            float x = preset.inner_radius * radius_factor * layer * r * cosf(theta);
+            float y = preset.inner_radius * radius_factor * layer * r * sinf(theta);
 
             float vert[VERT_LENGTH] = {x, pct_frq - 0.5f, y, frequencies[i], pct_frq};
             vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
@@ -815,12 +811,12 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
                 float i_pct = f((float)j / (float)svg_points.size());
                 int i = (i_pct) * NUM_POINTS;
 
-                float displacement = (frequencies[i] * current_preset.sensitivity * 0.05f) * sign;
+                float displacement = (frequencies[i] * current_preset.sensitivity * 0.05f) * -sign;
 
                 //float window = svg_points.size() / NUM_POINTS;
                 float pct_frq = g(i_pct);
                 glm::vec2 p = svg_points[j] + (svg_points[j] + svg_normals[j]) * displacement;
-                float vert[VERT_LENGTH] = {p.x * inner_radius, -p.y * inner_radius + y_offset, 0, frequencies[i], pct_frq};
+                float vert[VERT_LENGTH] = {p.x * preset.inner_radius, -p.y * preset.inner_radius + y_offset, 0, frequencies[i], pct_frq};
                 vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
                 
                 last = i;
@@ -911,6 +907,7 @@ void calc_audio(){
     float beta = 0.0009;
     bool lowpeak = (reactive_frequency > thresh);
     int beatms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_beat).count();
+    last_beat = now;
     bool debounce = (beatms > 100);
     bool peaked = lowpeak && debounce;
 
@@ -1041,10 +1038,43 @@ void render(bool to_buffer){
 }
 
 void main_loop(double current_time) {
+    auto now = std::chrono::steady_clock::now();
+
+    if (did_type_number && std::chrono::duration_cast<milliseconds>(now - last_num_press).count() > 400) {
+        int index = std::stoi(typed_number);
+        if (index < presets.size()) {
+            current_preset_index = index;
+            if (wants_to_save) {
+                current_preset.camera_center = {camera_center.x, camera_center.y, camera_center.z};
+                current_preset.camera_lookat = {camera_lookat.x, camera_lookat.y, camera_lookat.z};
+                presets[current_preset_index] = current_preset;
+                json j = presets;
+                std::ofstream outFile("presets.json");
+                if (outFile.is_open()) {
+                    outFile << j.dump(4);
+                    outFile.close();
+                } else {
+                    std::cerr << "Failed to open file for writing\n";
+                }
+                wants_to_save = false;
+            } else {
+                next_preset = presets[current_preset_index];
+
+                mixed_mat = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);
+        
+                if (next_preset.mode == TEXT || current_preset.mode == TEXT) {
+                    current_preset = next_preset;
+                }
+                effect_transition = 0.0;
+                did_type_number = false;
+            }
+        }
+    }
+
     calc_audio();
 
     if (false) {
-        inner_radius = sin(current_time * 5.0) * 1.0 + 3.0;
+        radius_factor = sin(current_time * 5.0) * 1.0 + 3.0;
         y_offset = sin(current_time * 5.0) * 1.0;
     }
 
@@ -1055,16 +1085,15 @@ void main_loop(double current_time) {
 
     if (current_preset.move_to_beat) {
         if (current_preset.inverted_displacement) {
-            inner_radius = current_preset.inner_radius - reactive_frequency * 0.25;
+            radius_factor = - reactive_frequency * 0.25;
         } else {
-            inner_radius = current_preset.inner_radius + reactive_frequency * 0.25;
+            radius_factor = + reactive_frequency * 0.25;
         }
     } else if (false) {
-        inner_radius = current_preset.inner_radius + sin(current_time * 5.0) * 0.1;
+        radius_factor = sin(current_time * 5.0) * 0.1;
     } else {
-        inner_radius = current_preset.inner_radius;
+        radius_factor = 1.0;
     }
-
 
     if (post_processing_enabled) {
         render(true);
@@ -1116,7 +1145,7 @@ int main() {
     if (inFile.is_open()) {
         json j_in;
         inFile >> j_in;
-        presets = j_in.get<std::array<Preset, 10>>();
+        presets = j_in.get<std::vector<Preset>>();
         std::cout << "Loaded people:\n";
     }
 
