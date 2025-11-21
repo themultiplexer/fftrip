@@ -496,7 +496,7 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
             glfwSetWindowShouldClose(window, GLFW_TRUE);
         } else if (key == GLFW_KEY_H) {
             current_preset.stereo_mode += 1;
-            current_preset.stereo_mode %= 5;
+            current_preset.stereo_mode %= 6;
         } else if (key == GLFW_KEY_I) {
             current_preset.inverted_displacement = !current_preset.inverted_displacement;
         } else if (key == GLFW_KEY_L) {
@@ -816,7 +816,8 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
                 //float window = svg_points.size() / NUM_POINTS;
                 float pct_frq = g(i_pct);
                 glm::vec2 p = svg_points[j] + (svg_points[j] + svg_normals[j]) * displacement;
-                float vert[VERT_LENGTH] = {p.x * preset.inner_radius, -p.y * preset.inner_radius + y_offset, 0, frequencies[i], pct_frq};
+                p *= preset.inner_radius * radius_factor;
+                float vert[VERT_LENGTH] = {p.x, -p.y + y_offset, 0, frequencies[i], pct_frq};
                 vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
                 
                 last = i;
@@ -955,8 +956,9 @@ void render(bool to_buffer){
     if (current_preset.id != next_preset.id) {
         if (effect_transition <= 1.0) {
             lerpit = true;
-            effect_transition += 0.01;
+            effect_transition += 0.005;
         } else {
+            printf("done\n");
             current_preset = next_preset;
             camera_center = glm::make_vec3(current_preset.camera_center.data());
             camera_lookat = glm::make_vec3(current_preset.camera_lookat.data());
@@ -992,10 +994,11 @@ void render(bool to_buffer){
 
         std::vector<std::vector<std::vector<glm::vec2>>> main = {
                                                 {{glm::vec2(-1.0, 0.0), glm::vec2(1.0, 0.0)}},
-                                                {{glm::vec2(-1.0, 0.5), glm::vec2(1.0, 0.5)},{glm::vec2(-1.0, -0.5), glm::vec2(1.0, -0.5)}, {glm::vec2(1.0, 0.45), glm::vec2(1.0, -0.45)}, {glm::vec2(-1.0, -0.45), glm::vec2(-1.0, 0.45)}}, 
+                                                {{glm::vec2(-1.0, 0.5), glm::vec2(1.0, 0.5)}, {glm::vec2(-1.0, -0.5), glm::vec2(1.0, -0.5)}, {glm::vec2(1.0, 0.45), glm::vec2(1.0, -0.45)}, {glm::vec2(-1.0, -0.45), glm::vec2(-1.0, 0.45)}}, 
                                                 {{glm::vec2(-1.0, 0.1), glm::vec2(0.0, 0.1)}, {glm::vec2(0.0, 0.1), glm::vec2(1.0, 0.1)}}, 
+                                                {{glm::vec2(-1.0, 0.2), glm::vec2(1.0, 0.2)}, {glm::vec2(-1.0, -0.2), glm::vec2(1.0, -0.2)}},
                                                 {{glm::vec2(-1.0, 0.1), glm::vec2(1.0, 0.1)}, {glm::vec2(-1.0, -0.1), glm::vec2(1.0, -0.1)}},
-                                                {{glm::vec2(-1.0, 0.1), glm::vec2(1.0, 0.1)}, {glm::vec2(-1.0, -0.1), glm::vec2(1.0, -0.1)}}
+                                                {{glm::vec2(1.0, 0.2), glm::vec2(-1.0, 0.2)}, {glm::vec2(1.0, -0.2), glm::vec2(-1.0, -0.2)}}
                                             };
         auto m = main[current_preset.stereo_mode];
         auto n = main[next_preset.stereo_mode];
@@ -1059,9 +1062,9 @@ void main_loop(double current_time) {
                 wants_to_save = false;
             } else {
                 next_preset = presets[current_preset_index];
-
                 mixed_mat = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);
         
+                std::cerr << "Next preset\n";
                 if (next_preset.mode == TEXT || current_preset.mode == TEXT) {
                     current_preset = next_preset;
                 }
@@ -1085,9 +1088,9 @@ void main_loop(double current_time) {
 
     if (current_preset.move_to_beat) {
         if (current_preset.inverted_displacement) {
-            radius_factor = - reactive_frequency * 0.25;
+            radius_factor = 1.0 + (-reactive_frequency * 0.5);
         } else {
-            radius_factor = + reactive_frequency * 0.25;
+            radius_factor = 1.0 + (reactive_frequency * 0.5);
         }
     } else if (false) {
         radius_factor = sin(current_time * 5.0) * 0.1;
