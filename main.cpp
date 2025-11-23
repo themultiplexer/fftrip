@@ -760,6 +760,7 @@ std::vector<VERT> create_vbo(std::array<float, 1024> frequencies, glm::vec2 from
             float pct_frq2 = g((float)i / (float)NUM_POINTS);
             std::vector<float> vert;
             glm::vec2 p = lerp(from, to, pct_frq);
+            p *= preset.inner_radius * radius_factor;
             
             p = p + glm::vec2(vec.y / norm, -vec.x / norm) * (frequencies[i] * preset.sensitivity * sign);
             vertices.push_back({p.x, p.y, 0.0, frequencies[i], pct_frq2});
@@ -827,7 +828,8 @@ std::vector<VERT> create_vbo(std::array<float, 1024> frequencies, glm::vec2 from
                 //float window = svg_points.size() / NUM_POINTS;
                 float pct_frq = g(i_pct);
                 glm::vec2 p = svg_points[j] + (svg_points[j] + svg_normals[j]) * displacement;
-                vertices.push_back({p.x * inner_radius, -p.y * inner_radius + y_offset, 0, frequencies[i], pct_frq});
+                p *= preset.inner_radius * radius_factor;
+                vertices.push_back({p.x, -p.y + y_offset, 0, frequencies[i], pct_frq});
             }
         }
     }
@@ -1067,6 +1069,7 @@ void main_loop(double current_time) {
                 current_preset.camera_center = {camera_center.x, camera_center.y, camera_center.z};
                 current_preset.camera_lookat = {camera_lookat.x, camera_lookat.y, camera_lookat.z};
                 presets[current_preset_index] = current_preset;
+                presets[current_preset_index].id = current_preset_index;
                 json j = presets;
                 std::ofstream outFile("presets.json");
                 if (outFile.is_open()) {
