@@ -1,5 +1,6 @@
 #include <GL/glew.h>
 #include <GL/gl.h>
+#include <GL/glu.h>
 #include <GL/glext.h>
 #include <GLFW/glfw3.h>
 #include <cmath>
@@ -636,6 +637,17 @@ static void resize(GLFWwindow *window, int width, int height) {
     }
 }
 
+bool iSCCW(std::vector<glm::vec2> contour) {
+    float winding_sum = 0.0f;
+    for (int i = 0; i < contour.size(); ++i) {
+        glm::vec2 a = contour[i];
+        glm::vec2 b = contour[(i+1)%contour.size()];
+        winding_sum += (b.x - a.x) * (b.y + a.y);
+    }
+
+    return winding_sum > 0;
+}
+
 bool Initialize() {
     aanalyzer = new AudioAnalyzer();
     aanalyzer->getdevices();
@@ -704,11 +716,11 @@ bool Initialize() {
     glBufferData(GL_ARRAY_BUFFER, sizeof(circleVertices), circleVertices, GL_STATIC_DRAW);
     glUseProgram(program);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, VERT_LENGTH * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VERT), (void *)0);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, VERT_LENGTH * sizeof(float), (GLvoid *)(3 * sizeof(GLfloat)));
+    glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, sizeof(VERT), (GLvoid *)(3 * sizeof(GLfloat)));
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, VERT_LENGTH * sizeof(float), (GLvoid *)(4 * sizeof(GLfloat)));
+    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE, sizeof(VERT), (GLvoid *)(4 * sizeof(GLfloat)));
     glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -733,7 +745,7 @@ bool Initialize() {
     glUseProgram(0);
 
     glEnable(GL_POINT_SMOOTH);
-    glEnable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -852,11 +864,86 @@ void limit_framerate(duration<double> frame_time, double targetFPS) {
         std::this_thread::sleep_for(targetTime - frame_time);
 
 }
+std::vector<VERT> triangles;
+void vertexCallback(void* data) {
+    VERT* v = (VERT*)data;
+    triangles.push_back(*v);
+}
+
+void combineCallback(
+    GLdouble coords[3],
+    void* vertexData[4],
+    GLfloat weight[4],
+    void** outData )
+{
+    // Create a new vertex with your own data
+    VERT* v = new VERT;
+    v->x = coords[0];
+    v->y = coords[1];
+    v->z = 0.0;
+    v->frq  = 0.0; // whatever
+    v->vol  = 0.0; // whatever
+
+
+    *outData = v;
+}
+
+void beginCallback(GLenum type) {
+    // nothing
+}
+
+void endCallback() {
+    // nothing
+}
+void errorCallback(GLenum errorCode) {
+    fprintf(stderr, "Tess error: %s\n", gluErrorString(errorCode));
+}
 
 void main_draw(std::vector<VERT> vertices) {
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size() * 5, &vertices[0], GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    if (current_preset.mode == OUTLINE) {
+        vertices.push_back(vertices[0]);
+
+        glDisable(GL_CULL_FACE);
+        triangles = std::vector<VERT>();
+        GLUtesselator* tess = gluNewTess();
+
+        gluTessProperty(tess, GLU_TESS_WINDING_RULE, GLU_TESS_WINDING_ODD);
+
+        gluTessCallback(tess, GLU_TESS_BEGIN, (void (*)())beginCallback);
+        gluTessCallback(tess, GLU_TESS_END,   (void (*)())endCallback);
+        gluTessCallback(tess, GLU_TESS_VERTEX,(void (*)())vertexCallback);
+        gluTessCallback(tess, GLU_TESS_COMBINE, (void (*)(void))combineCallback);
+        gluTessCallback(tess, GLU_TESS_ERROR, (void (*)())errorCallback);
+
+        gluTessBeginPolygon(tess, nullptr);
+        gluTessBeginContour(tess);
+
+        std::vector<glm::vec<3, double>> coords;
+        std::vector<VERT> stableVerts;
+        stableVerts.reserve(vertices.size());
+
+        for (auto &p : vertices) {
+            stableVerts.push_back(VERT{p.x, p.y, p.z, 0.1, 1.0});
+            coords.push_back({p.x, p.y, p.z});
+
+            gluTessVertex(tess, glm::value_ptr(coords.back()), &stableVerts.back());
+        }
+        gluTessEndContour(tess);
+        gluTessEndPolygon(tess);
+
+        gluDeleteTess(tess);
+
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, triangles.size() * sizeof(VERT), &triangles[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    } else {
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(VERT), &vertices[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
+
 	// Use the shader program
 	glUseProgram(program);
 	glUniform1i(glGetUniformLocation(program, "color_mode"), current_preset.color_mode);
@@ -872,13 +959,24 @@ void main_draw(std::vector<VERT> vertices) {
 		glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
 		glDrawArrays(GL_POINTS, 0, NUM_POINTS);
 	} else if (current_preset.mode == OUTLINE) {
-		glDrawArrays(GL_LINE_STRIP, 0, svg_points.size());
-		glDrawArrays(GL_POINTS, 0, svg_points.size());
+
+
+        if (false) {
+            glDrawArrays(GL_LINE_STRIP, 0, svg_points.size());
+            glDrawArrays(GL_POINTS, 0, svg_points.size());
+        } else {
+            //glDrawArrays(GL_LINE_LOOP, 0, triangles.size());
+            glDrawArrays(GL_TRIANGLES, 0, triangles.size() * 5);
+            glDrawArrays(GL_POINTS, 0, triangles.size());
+
+        }
+
 	} if (current_preset.mode == SPHERE) {
         glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, SPHERE_LAYERS * NUM_POINTS);
         glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
     } else if (current_preset.mode == SPHERE_SPIRAL)  {
         glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
+
 	}
 
 	// Unbind VAO and shader
@@ -1171,8 +1269,8 @@ int main() {
         std::cout << "Loaded people:\n";
     }
 
-    current_preset = presets[1];
-    next_preset = presets[1];
+    current_preset = presets[12];
+    next_preset = presets[12];
     effect = effects[current_preset.effect_mode];
     
 
@@ -1221,11 +1319,18 @@ int main() {
         svg_points.push_back(glm::vec2(d[0], d[1]));
     }
     svg_points.push_back(svg_points.front());
+
+
     for (auto d : data["normals"]) {
         svg_normals.push_back(glm::vec2(d[0], d[1]));
     }
     svg_normals.push_back(svg_normals.front());
 
+    if (!iSCCW(svg_points)) {
+        std::reverse(svg_points.begin(), svg_points.end());
+        std::reverse(svg_normals.begin(), svg_normals.end());
+    }
+    
     /* Not that easy:
     std::thread t([](){
         LoadFontRendering(SHADER_PATH + std::string("fonts/DroidSansMono.ttf"));
