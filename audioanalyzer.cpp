@@ -4,7 +4,11 @@
 
 AudioAnalyzer::AudioAnalyzer(): stereo(true) {
     cfg = kiss_fft_alloc(FRAMES, 0, NULL, NULL);
+#ifdef _WIN32
+    adc = new RtAudio(RtAudio::Api::WINDOWS_DS);
+#else
     adc = new RtAudio(RtAudio::Api::LINUX_PULSE);
+#endif
 }
 
 void AudioAnalyzer::applyHannWindow(float* data, int channel) {
@@ -25,14 +29,14 @@ void AudioAnalyzer::startRecording() {
     streamOptions.numberOfBuffers = 4;
     //streamOptions.flags = RTAUDIO_NONINTERLEAVED;
 
-    unsigned int sampleRate = 48000;
+    unsigned int sampleRate = 44000;
     unsigned int bufferFrames = FRAMES;
 
 #ifdef _WIN32
     bool failure = false;
     try
     {
-        adc->openStream(NULL, &parameters, RTAUDIO_FLOAT32, sampleRate, &bufferFrames, &AudioAnalyzer::record);
+        adc->openStream(NULL, &parameters, RTAUDIO_FLOAT32, sampleRate, &bufferFrames, &AudioAnalyzer::static_record, this);
         adc->startStream();
     }
     catch (const RtAudioError e)

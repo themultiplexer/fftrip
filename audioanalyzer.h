@@ -1,8 +1,14 @@
 #ifndef AUDIOANALYZER_H
 #define AUDIOANALYZER_H
 #include <rtaudio/RtAudio.h>
+#ifdef _WIN32
+#include <kiss_fft.h>
+#else
 #include <kissfft/kiss_fft.h>
 #include <kissfft/kiss_fftr.h>
+#endif
+#include <algorithm>
+#include <numeric>
 
 #define FRAMES 1024
 

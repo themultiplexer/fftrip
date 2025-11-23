@@ -49,6 +49,14 @@ using namespace std::chrono;
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
+struct VERT {
+    float x;
+    float y;
+    float z;
+    float vol;
+    float frq;
+};
+
 #define VERT_LENGTH 5  // x,y,z,frequency, volume
 #define SPHERE_LAYERS 8
 #define FRAMES 1024
@@ -153,7 +161,7 @@ kiss_fft_cfg cfg;
 
 unsigned int screen_width = 3840;
 unsigned int screen_height = 2160;
-float cam_speed = 0.004;
+float cam_speed = 0.004f;
 
 bool font_loaded;
 
@@ -388,15 +396,25 @@ void load_background() {
     std::string path = SHADER_PATH + std::string("logos/");
     std::string new_file;
     int cur_idx = 0;
-    for (const auto &entry : fs::directory_iterator(path)) {
-        if (entry.path().filename().string().ends_with("png") || entry.path().filename().string().ends_with("jpg")) {
-            if (cur_idx == current_file_index) {
-                new_file = entry.path().string();
-            }
 
-            cur_idx += 1;
+    if (fs::exists(path)) {
+        for (const auto &entry : fs::directory_iterator(path)) {
+            if (entry.path().filename().string().ends_with("png") || entry.path().filename().string().ends_with("jpg")) {
+                if (cur_idx == current_file_index) {
+                    new_file = entry.path().string();
+                }
+
+                cur_idx += 1;
+            }
         }
     }
+
+    if (cur_idx == 0)
+    {
+        return;
+    }
+    
+
     if (!new_file.empty()) {
         cv::Mat black = cv::Mat(cv::Size(screen_width, screen_height), CV_8UC4, cv::Scalar(0, 0, 0, 0));
         cv::Mat image = cv::imread(new_file, cv::IMREAD_COLOR);
@@ -724,14 +742,14 @@ bool Initialize() {
 
 static int base = 40;
 static float f(float x) {
-    return (pow(base, x) - 1.0) / (base - 1.0);
+    return (pow(base, x) - 1.0f) / (base - 1.0f);
 }
 static float g(float x) {
-    return log(x * (base - 1.0) + 1.0) / log(base);
+    return log(x * (base - 1.0f) + 1.0f) / log(base);
 }
 
-std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 from, glm::vec2 to, float sign, Preset preset) {
-    std::vector<float> vertices;
+std::vector<VERT> create_vbo(std::array<float, 1024> frequencies, glm::vec2 from, glm::vec2 to, float sign, Preset preset) {
+    std::vector<VERT> vertices;
 
     glm::vec2 vec = from - to;
     float norm = glm::length(vec);
@@ -744,10 +762,7 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
             glm::vec2 p = lerp(from, to, pct_frq);
             
             p = p + glm::vec2(vec.y / norm, -vec.x / norm) * (frequencies[i] * preset.sensitivity * sign);
-            p *= preset.inner_radius * radius_factor;
-            vert = {p.x, p.y, 0.0, frequencies[i], pct_frq2};
-
-            vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
+            vertices.push_back({p.x, p.y, 0.0, frequencies[i], pct_frq2});
         }
     } else if (preset.mode == CIRCLE) {
         for (int i = 0; i < NUM_POINTS; i++) {
@@ -759,8 +774,7 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
             float x = preset.inner_radius * radius_factor * r * cosf(theta);
             float y = preset.inner_radius * radius_factor * r * sinf(theta);
 
-            float vert[VERT_LENGTH] = {x, y, 0.0, frequencies[i], pct_frq};
-            vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
+            vertices.push_back({x, y, 0.0, frequencies[i], pct_frq});
         }
     } else if (preset.mode == CIRCLE_FLAT) {
         const float goldenAngle = M_PI * (3.0f - std::sqrt(5.0f)); // ≈ 137.50776°
@@ -773,8 +787,7 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
             float x = r * std::cos(theta);
             float y = r * std::sin(theta);
 
-            float vert[VERT_LENGTH] = {x*0.05f, y*0.05f, 0.0, frequencies[i], (float)i / NUM_POINTS};
-            vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
+            vertices.push_back({x*0.05f, y*0.05f, 0.0, frequencies[i], (float)i / NUM_POINTS});
         }
     } else if (preset.mode == SPHERE) {
         for (int c = 0; c < SPHERE_LAYERS; c++) {
@@ -787,8 +800,7 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
                 float x = preset.inner_radius * radius_factor * layer * r * cosf(theta);
                 float y = preset.inner_radius * radius_factor * layer * r * sinf(theta);
 
-                float vert[VERT_LENGTH] = {x, c * 0.1f, y, frequencies[i], (float)i / NUM_POINTS};
-                vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
+                vertices.push_back({x, c * 0.1f, y, frequencies[i], (float)i / NUM_POINTS});
             }
         }
     } else if (preset.mode == SPHERE_SPIRAL) {
@@ -801,8 +813,7 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
             float x = preset.inner_radius * radius_factor * layer * r * cosf(theta);
             float y = preset.inner_radius * radius_factor * layer * r * sinf(theta);
 
-            float vert[VERT_LENGTH] = {x, pct_frq - 0.5f, y, frequencies[i], pct_frq};
-            vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
+            vertices.push_back({x, pct_frq - 0.5f, y, frequencies[i], pct_frq});
         }
     } else if (preset.mode == OUTLINE) {
         int last = -1;
@@ -816,11 +827,7 @@ std::vector<float> create_vbo(std::array<float, 1024> frequencies, glm::vec2 fro
                 //float window = svg_points.size() / NUM_POINTS;
                 float pct_frq = g(i_pct);
                 glm::vec2 p = svg_points[j] + (svg_points[j] + svg_normals[j]) * displacement;
-                p *= preset.inner_radius * radius_factor;
-                float vert[VERT_LENGTH] = {p.x, -p.y + y_offset, 0, frequencies[i], pct_frq};
-                vertices.insert(vertices.end(), std::begin(vert), std::end(vert));
-                
-                last = i;
+                vertices.push_back({p.x * inner_radius, -p.y * inner_radius + y_offset, 0, frequencies[i], pct_frq});
             }
         }
     }
@@ -844,9 +851,9 @@ void limit_framerate(duration<double> frame_time, double targetFPS) {
 
 }
 
-void main_draw(std::vector<float> vertices) {
+void main_draw(std::vector<VERT> vertices) {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size() * 5, &vertices[0], GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	// Use the shader program
 	glUseProgram(program);
@@ -888,7 +895,7 @@ void calc_audio(){
     std::vector<float> raw_left_frequencies = aanalyzer->getLeftFrequencies();
 	std::vector<float> raw_right_frequencies = aanalyzer->getRightFrequencies();
 
-    float alpha = 0.7;
+    float alpha = 0.7f;
 
     arbirtray_logarithm_thing(raw_left_frequencies);
     arbirtray_logarithm_thing(raw_right_frequencies);
@@ -902,10 +909,10 @@ void calc_audio(){
     for (int i = 1; i < 6; ++i) {
         sum += left_frequencies[i];
     }
-    reactive_frequency = (float)sum / 6.0;
+    reactive_frequency = (float)sum / 6.0f;
 
     auto now = std::chrono::steady_clock::now();
-    float beta = 0.0009;
+    float beta = 0.0009f;
     bool lowpeak = (reactive_frequency > thresh);
     int beatms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_beat).count();
     last_beat = now;
@@ -916,7 +923,7 @@ void calc_audio(){
         beat = true;
         thresh = std::max(reactive_frequency - 0.2f, thresh);
     } else {
-        thresh = std::max((beta * (reactive_frequency + 0.2 )) + (1.0 - beta) * thresh, 0.25);
+        thresh = std::max((beta * (reactive_frequency + 0.2f )) + (1.0f - beta) * thresh, 0.25f);
     }
 }
 
@@ -927,7 +934,7 @@ void render(bool to_buffer){
     glLineWidth(current_preset.line_width);
     glPointSize(10.0);
     glClear(GL_COLOR_BUFFER_BIT);
-    zoom_speed = current_preset.reactive_zoom_enabled ? (reactive_frequency * current_preset.zoom_sensitivity * 5.0) : current_preset.zoom_sensitivity * 10.0;
+    zoom_speed = current_preset.reactive_zoom_enabled ? (reactive_frequency * current_preset.zoom_sensitivity * 5.0f) : current_preset.zoom_sensitivity * 10.0;
 
     if (current_preset.color_mode == 1) {
         int freq_index = std::distance(std::begin(left_frequencies), std::max_element(std::begin(left_frequencies), std::end(left_frequencies)));
@@ -956,7 +963,7 @@ void render(bool to_buffer){
     if (current_preset.id != next_preset.id) {
         if (effect_transition <= 1.0) {
             lerpit = true;
-            effect_transition += 0.005;
+            effect_transition += 0.01f;
         } else {
             printf("done\n");
             current_preset = next_preset;
@@ -1003,16 +1010,16 @@ void render(bool to_buffer){
         auto m = main[current_preset.stereo_mode];
         auto n = main[next_preset.stereo_mode];
 
-        std::vector<std::vector<float>> vbos1;
+        std::vector<std::vector<VERT>> vbos1;
         for (int i = 0; i < m.size(); i++) {
-            float b = current_preset.inverted_displacement ? 1.0 : -1.0;
+            float b = current_preset.inverted_displacement ? 1.0f : -1.0f;
             float s = current_preset.inverted_direction ? b : -b;
             vbos1.push_back(create_vbo(i%2==0 ? left_frequencies : right_frequencies, m[i][0], m[i][1], i%2==0? b : s, current_preset));
         }
 
-        std::vector<std::vector<float>> vbos2;
+        std::vector<std::vector<VERT>> vbos2;
         for (int i = 0; i < n.size(); i++) {
-            float b = next_preset.inverted_displacement ? 1.0 : -1.0;
+            float b = next_preset.inverted_displacement ? 1.0f : -1.0f;
             float s = next_preset.inverted_direction ? b : -b;
             vbos2.push_back(create_vbo(i%2==0 ? left_frequencies : right_frequencies, n[i][0], n[i][1], i%2==0? b : s, next_preset));
         }
@@ -1020,12 +1027,21 @@ void render(bool to_buffer){
         /* Here the transition (vertex interpolation) magic happens */
         if(lerpit) {
             for (int i = 0; i < std::max(vbos1.size(), vbos2.size()); i++) {
-                std::vector<float> from = vbos1[std::min(i, (int)vbos1.size()-1)];
-                std::vector<float> to = vbos2[std::min(i, (int)vbos2.size()-1)];
-                std::vector<float> out = std::vector<float>(std::max(from.size(), to.size()));
+                std::vector<VERT> from = vbos1[std::min(i, (int)vbos1.size()-1)];
+                std::vector<VERT> to = vbos2[std::min(i, (int)vbos2.size()-1)];
+                std::vector<VERT> out = std::vector<VERT>(std::max(from.size(), to.size()));
+
                 for (int i = 0; i < out.size(); i++) {
-                    out[i] = lerp(from[std::min(i, (int)from.size()-1)], to[std::min(i, (int)to.size()-1)], effect_transition);
+                    VERT f = from[std::min(i, (int)from.size()-1)];
+                    VERT t = to[std::min(i, (int)to.size()-1)];
+                    glm::vec3 o = lerp(glm::vec3(f.x, f.y, f.z), glm::vec3(t.x, t.y, t.z), effect_transition);
+                    out[i].x = o.x;
+                    out[i].y = o.y;
+                    out[i].z = o.z;
+                    out[i].vol = t.vol;
+                    out[i].frq = t.frq;
                 }
+
                 main_draw(out);
             }
         } else {
