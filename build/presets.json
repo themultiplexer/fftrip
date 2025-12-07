@@ -25,6 +25,7 @@
         "rotate_camera": true,
         "sensitivity": 0.07999999821186066,
         "stereo_mode": 1,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -53,6 +54,7 @@
         "rotate_camera": true,
         "sensitivity": 0.03999999910593033,
         "stereo_mode": 3,
+        "translate_object": false,
         "zoom_sensitivity": 1.9999992847442627
     },
     {
@@ -81,6 +83,7 @@
         "rotate_camera": true,
         "sensitivity": 0.05000000819563866,
         "stereo_mode": 3,
+        "translate_object": false,
         "zoom_sensitivity": 1.25
     },
     {
@@ -109,6 +112,7 @@
         "rotate_camera": true,
         "sensitivity": 0.11000001430511475,
         "stereo_mode": 3,
+        "translate_object": false,
         "zoom_sensitivity": 1.4499998092651367
     },
     {
@@ -137,6 +141,7 @@
         "rotate_camera": true,
         "sensitivity": 0.11000001430511475,
         "stereo_mode": 3,
+        "translate_object": false,
         "zoom_sensitivity": 1.4499998092651367
     },
     {
@@ -165,6 +170,7 @@
         "rotate_camera": false,
         "sensitivity": 0.5800000429153442,
         "stereo_mode": 1,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -193,6 +199,7 @@
         "rotate_camera": false,
         "sensitivity": 0.15000000596046448,
         "stereo_mode": 2,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -221,6 +228,7 @@
         "rotate_camera": false,
         "sensitivity": 0.25,
         "stereo_mode": 0,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -249,6 +257,7 @@
         "rotate_camera": false,
         "sensitivity": 0.25,
         "stereo_mode": 0,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -277,6 +286,7 @@
         "rotate_camera": true,
         "sensitivity": 0.07000000774860382,
         "stereo_mode": 3,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -305,6 +315,7 @@
         "rotate_camera": true,
         "sensitivity": 0.07999999821186066,
         "stereo_mode": 1,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -333,6 +344,7 @@
         "rotate_camera": false,
         "sensitivity": 0.11000001430511475,
         "stereo_mode": 3,
+        "translate_object": false,
         "zoom_sensitivity": 0.34999996423721313
     },
     {
@@ -361,6 +373,7 @@
         "rotate_camera": true,
         "sensitivity": 1.1499994993209839,
         "stereo_mode": 0,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -389,6 +402,7 @@
         "rotate_camera": false,
         "sensitivity": 1.1499994993209839,
         "stereo_mode": 0,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -417,6 +431,7 @@
         "rotate_camera": false,
         "sensitivity": 1.1499994993209839,
         "stereo_mode": 0,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -445,6 +460,7 @@
         "rotate_camera": true,
         "sensitivity": 1.1499994993209839,
         "stereo_mode": 0,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -473,6 +489,7 @@
         "rotate_camera": true,
         "sensitivity": 0.03999999910593033,
         "stereo_mode": 3,
+        "translate_object": false,
         "zoom_sensitivity": 0.10000006854534149
     },
     {
@@ -501,34 +518,36 @@
         "rotate_camera": false,
         "sensitivity": 0.25,
         "stereo_mode": 0,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
         "background_mode": 0,
         "camera_center": [
             0.0,
-            -0.10000000149011612,
+            0.09200002253055573,
             1.0
         ],
         "camera_lookat": [
             0.0,
-            0.0,
+            0.1919998973608017,
             0.0
         ],
-        "color_mode": 0,
-        "effect_mode": 6,
+        "color_mode": 1,
+        "effect_mode": 4,
         "id": 18,
-        "inner_radius": 0.20000001788139343,
+        "inner_radius": 0.7999998331069946,
         "inverted_background": false,
         "inverted_direction": false,
         "inverted_displacement": false,
         "line_width": 10.0,
-        "mode": 0,
+        "mode": 2,
         "move_to_beat": true,
-        "reactive_zoom_enabled": false,
+        "reactive_zoom_enabled": true,
         "rotate_camera": false,
-        "sensitivity": 0.12000000476837158,
+        "sensitivity": 1.1499994993209839,
         "stereo_mode": 0,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
@@ -557,6 +576,7 @@
         "rotate_camera": false,
         "sensitivity": 0.2699999511241913,
         "stereo_mode": 3,
+        "translate_object": false,
         "zoom_sensitivity": 0.5
     }
 ]

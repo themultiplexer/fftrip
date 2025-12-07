@@ -92,6 +92,7 @@ struct Preset {
     bool inverted_displacement;
     bool inverted_direction;
     bool rotate_camera;
+    bool translate_object;
     bool move_to_beat;
     bool tesselate;
     float sensitivity;
@@ -121,6 +122,7 @@ void to_json(json& j, const Preset& p) {
     {"move_to_beat", p.move_to_beat},
     {"reactive_zoom_enabled", p.reactive_zoom_enabled},
     {"rotate_camera", p.rotate_camera},
+    {"translate_object", p.translate_object},
     {"id", p.id}
     };
 }
@@ -143,6 +145,7 @@ void from_json(const json& j, Preset& p) {
     j.at("move_to_beat").get_to(p.move_to_beat);
     j.at("reactive_zoom_enabled").get_to(p.reactive_zoom_enabled);
     j.at("rotate_camera").get_to(p.rotate_camera);
+    j.at("translate_object").get_to(p.translate_object);
     j.at("id").get_to(p.id);
 }
 
@@ -161,8 +164,8 @@ cv::UMat background;
 AudioAnalyzer *aanalyzer;
 kiss_fft_cfg cfg;
 
-unsigned int screen_width = 3840;
-unsigned int screen_height = 2160;
+int screen_width = 3840;
+int screen_height = 2160;
 float cam_speed = 0.004f;
 
 bool font_loaded;
@@ -529,6 +532,8 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
             effect = effects[current_preset.effect_mode];
         } else if (key == GLFW_KEY_P) {
             post_processing_enabled = !post_processing_enabled;
+        } else if (key == GLFW_KEY_J) {
+            current_preset.translate_object = !current_preset.translate_object;
         }  else if (key == GLFW_KEY_T) {
             current_preset.rotate_camera = !current_preset.rotate_camera;
         } else if (key == GLFW_KEY_F) {
@@ -981,7 +986,6 @@ void main_draw(std::vector<VERT> vertices) {
             glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * vertices.size());
         } else if (current_preset.mode == SPHERE_SPIRAL)  {
             glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
-    
         }
     }
 
@@ -1200,14 +1204,14 @@ void main_loop(double current_time) {
 
     calc_audio();
 
-    if (true) {
+    if (current_preset.translate_object) {
         //radius_factor = sin(current_time * 5.0) * 1.0 + 3.0;
+        float theta = current_time * 0.5 * M_PI;
+        float r = 0.05;
+        x_offset = r * cosf(theta);
+        y_offset = r * sinf(theta);
     }
 
-    float theta = current_time * 0.5 * M_PI;
-    float r = 0.05;
-    x_offset = r * cosf(theta);
-    y_offset = r * sinf(theta);
 
     if (current_preset.rotate_camera) {
         rotation += 0.005;
@@ -1285,9 +1289,14 @@ int main() {
     effect = effects[current_preset.effect_mode];
     
 
-    if (!glfwInit())
+    if (!glfwInit()) {
         exit(EXIT_FAILURE);
+    }
 
+    const GLFWvidmode * mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+
+    screen_width = mode->width;
+    screen_height = mode->height;
     // glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
     window = glfwCreateWindow(screen_width, screen_height, "FFT rip", NULL, NULL);
     // window = glfwCreateWindow(screen_width, screen_height, "My Title", glfwGetPrimaryMonitor(), nullptr);
