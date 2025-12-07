@@ -13,9 +13,7 @@ out float vol;
 out float frq;
 
 void main() {
-    vec2  pos = position.xy;
-    float AR = uResolution.y / uResolution.x;
     vol = volume;
-    gl_Position = proj * view * model * vec4(pos, position.z, 1.0);
+    gl_Position = proj * view * model * vec4(position, 1.0);
     frq = frequency;
 }

@@ -93,6 +93,7 @@ struct Preset {
     bool inverted_direction;
     bool rotate_camera;
     bool move_to_beat;
+    bool tesselate;
     float sensitivity;
     float zoom_sensitivity;
     float line_width;
@@ -181,6 +182,7 @@ int zy = 21;
 int dilation_size = 1;
 int erosion_size = 1;
 float angle = 0.4f;
+float x_offset = 0.0;
 float y_offset = 0.0;
 
 float radius_factor = 1.0f;
@@ -206,6 +208,7 @@ int color_cycle = 0;
 
 std::chrono::time_point<std::chrono::steady_clock> last_beat, last_num_press;
 auto last_frame = std::chrono::high_resolution_clock::now();
+auto start_time = std::chrono::high_resolution_clock::now();
 
 bool wants_to_save = false;
 bool did_type_number = false;
@@ -545,6 +548,8 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
             current_preset.reactive_zoom_enabled = !current_preset.reactive_zoom_enabled;
         } else if (key == GLFW_KEY_X) {
             current_preset.inverted_direction = !current_preset.inverted_direction;
+        } else if (key == GLFW_KEY_N) {
+            current_preset.tesselate = !current_preset.tesselate;
         } else if (key == GLFW_KEY_Y) {
             current_preset.move_to_beat = !current_preset.move_to_beat;
         } else if (key == GLFW_KEY_K) {
@@ -637,11 +642,11 @@ static void resize(GLFWwindow *window, int width, int height) {
     }
 }
 
-bool iSCCW(std::vector<glm::vec2> contour) {
+bool iSCCW(std::vector<VERT> contour) {
     float winding_sum = 0.0f;
     for (int i = 0; i < contour.size(); ++i) {
-        glm::vec2 a = contour[i];
-        glm::vec2 b = contour[(i+1)%contour.size()];
+        glm::vec2 a = {contour[i].x, contour[i].y};
+        glm::vec2 b = {contour[(i+1)%contour.size()].x, contour[(i+1)%contour.size()].y};
         winding_sum += (b.x - a.x) * (b.y + a.y);
     }
 
@@ -746,6 +751,7 @@ bool Initialize() {
 
     glEnable(GL_POINT_SMOOTH);
     //glEnable(GL_CULL_FACE);
+    glDisable(GL_CULL_FACE);
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -841,7 +847,7 @@ std::vector<VERT> create_vbo(std::array<float, 1024> frequencies, glm::vec2 from
                 float pct_frq = g(i_pct);
                 glm::vec2 p = svg_points[j] + (svg_points[j] + svg_normals[j]) * displacement;
                 p *= preset.inner_radius * radius_factor;
-                vertices.push_back({p.x, -p.y + y_offset, 0, frequencies[i], pct_frq});
+                vertices.push_back({p.x + x_offset, -p.y + y_offset, 0, 0.0, pct_frq});
             }
         }
     }
@@ -878,11 +884,11 @@ void combineCallback(
 {
     // Create a new vertex with your own data
     VERT* v = new VERT;
-    v->x = coords[0];
-    v->y = coords[1];
+    v->x = (float)coords[0];
+    v->y = (float)coords[1];
     v->z = 0.0;
-    v->frq  = 0.0; // whatever
-    v->vol  = 0.0; // whatever
+    v->frq  = 0.1; // whatever
+    v->vol  = 0.1; // whatever
 
 
     *outData = v;
@@ -900,15 +906,17 @@ void errorCallback(GLenum errorCode) {
 }
 
 void main_draw(std::vector<VERT> vertices) {
-
-    if (current_preset.mode == OUTLINE) {
+    if (current_preset.tesselate) {
         vertices.push_back(vertices[0]);
+        if (!iSCCW(vertices)) {
+            std::reverse(vertices.begin(), vertices.end());
+        }
 
-        glDisable(GL_CULL_FACE);
         triangles = std::vector<VERT>();
         GLUtesselator* tess = gluNewTess();
 
         gluTessProperty(tess, GLU_TESS_WINDING_RULE, GLU_TESS_WINDING_ODD);
+        gluTessProperty(tess, GLU_TESS_BOUNDARY_ONLY, GL_FALSE);
 
         gluTessCallback(tess, GLU_TESS_BEGIN, (void (*)())beginCallback);
         gluTessCallback(tess, GLU_TESS_END,   (void (*)())endCallback);
@@ -916,18 +924,19 @@ void main_draw(std::vector<VERT> vertices) {
         gluTessCallback(tess, GLU_TESS_COMBINE, (void (*)(void))combineCallback);
         gluTessCallback(tess, GLU_TESS_ERROR, (void (*)())errorCallback);
 
-        gluTessBeginPolygon(tess, nullptr);
-        gluTessBeginContour(tess);
-
-        std::vector<glm::vec<3, double>> coords;
+        std::vector<std::array<GLdouble,3>> coords;
         std::vector<VERT> stableVerts;
         stableVerts.reserve(vertices.size());
 
-        for (auto &p : vertices) {
-            stableVerts.push_back(VERT{p.x, p.y, p.z, 0.1, 1.0});
-            coords.push_back({p.x, p.y, p.z});
+        gluTessBeginPolygon(tess, nullptr);
+        gluTessBeginContour(tess);
 
-            gluTessVertex(tess, glm::value_ptr(coords.back()), &stableVerts.back());
+
+        for (auto &p : vertices) {
+            stableVerts.push_back(VERT{(float)p.x, (float)p.y, 0.0, 0.1, 1.0});
+            coords.push_back({(float)p.x, (float)p.y, 0.0});
+
+            gluTessVertex(tess, coords.back().data(), &stableVerts.back());
         }
         gluTessEndContour(tess);
         gluTessEndPolygon(tess);
@@ -951,33 +960,31 @@ void main_draw(std::vector<VERT> vertices) {
 	// Bind vertex array object (VAO)
 	glBindVertexArray(vao);
 
-	// Draw the circle as a line loop
-	if (current_preset.mode == LINES) {
-		glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
-		glDrawArrays(GL_POINTS, 0, NUM_POINTS);
-	} else if (current_preset.mode == CIRCLE || current_preset.mode == CIRCLE_FLAT) {
-		glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
-		glDrawArrays(GL_POINTS, 0, NUM_POINTS);
-	} else if (current_preset.mode == OUTLINE) {
+    if (current_preset.tesselate) {
+        //glDrawArrays(GL_LINE_LOOP, 0, triangles.size());
+        glDrawArrays(GL_TRIANGLES, 0, triangles.size());
+        glDrawArrays(GL_POINTS, 0, triangles.size());
 
-
-        if (false) {
-            glDrawArrays(GL_LINE_STRIP, 0, svg_points.size());
-            glDrawArrays(GL_POINTS, 0, svg_points.size());
-        } else {
-            //glDrawArrays(GL_LINE_LOOP, 0, triangles.size());
-            glDrawArrays(GL_TRIANGLES, 0, triangles.size() * 5);
-            glDrawArrays(GL_POINTS, 0, triangles.size());
-
+    } else {
+        // Draw the circle as a line loop
+        if (current_preset.mode == LINES) {
+            glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
+            glDrawArrays(GL_POINTS, 0, vertices.size());
+        } else if (current_preset.mode == CIRCLE || current_preset.mode == CIRCLE_FLAT) {
+            glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
+            glDrawArrays(GL_POINTS, 0, vertices.size());
+        } else if (current_preset.mode == OUTLINE) {
+            glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
+            glDrawArrays(GL_POINTS, 0, vertices.size());
+        } if (current_preset.mode == SPHERE) {
+            glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, SPHERE_LAYERS * vertices.size());
+            glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * vertices.size());
+        } else if (current_preset.mode == SPHERE_SPIRAL)  {
+            glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
+    
         }
+    }
 
-	} if (current_preset.mode == SPHERE) {
-        glDrawArrays(GL_LINE_STRIP_ADJACENCY_EXT, 0, SPHERE_LAYERS * NUM_POINTS);
-        glDrawArrays(GL_POINTS, 0, SPHERE_LAYERS * NUM_POINTS);
-    } else if (current_preset.mode == SPHERE_SPIRAL)  {
-        glDrawArrays(GL_LINE_STRIP, 0, NUM_POINTS);
-
-	}
 
 	// Unbind VAO and shader
 	glBindVertexArray(0);
@@ -1193,13 +1200,17 @@ void main_loop(double current_time) {
 
     calc_audio();
 
-    if (false) {
-        radius_factor = sin(current_time * 5.0) * 1.0 + 3.0;
-        y_offset = sin(current_time * 5.0) * 1.0;
+    if (true) {
+        //radius_factor = sin(current_time * 5.0) * 1.0 + 3.0;
     }
 
+    float theta = current_time * 0.5 * M_PI;
+    float r = 0.05;
+    x_offset = r * cosf(theta);
+    y_offset = r * sinf(theta);
+
     if (current_preset.rotate_camera) {
-        rotation += current_time;
+        rotation += 0.005;
         set_camera(camera_center, camera_lookat, rotation);
     }
 
@@ -1325,11 +1336,6 @@ int main() {
         svg_normals.push_back(glm::vec2(d[0], d[1]));
     }
     svg_normals.push_back(svg_normals.front());
-
-    if (!iSCCW(svg_points)) {
-        std::reverse(svg_points.begin(), svg_points.end());
-        std::reverse(svg_normals.begin(), svg_normals.end());
-    }
     
     /* Not that easy:
     std::thread t([](){
@@ -1342,13 +1348,15 @@ int main() {
     camera_lookat = glm::make_vec3(current_preset.camera_lookat.data());
     set_camera(camera_center, camera_lookat);
 
+    start_time = high_resolution_clock::now();
+
     while (!glfwWindowShouldClose(window)) {
-        duration<float> f = get_relative_time();
+        auto time = duration<double>(high_resolution_clock::now() - start_time);
         loop_key_check();
-        main_loop((double)std::chrono::duration_cast<milliseconds>(f).count() / 1000.0);
+        main_loop((double)std::chrono::duration_cast<milliseconds>(time).count() / 1000.0);
         glfwSwapBuffers(window);
         glfwPollEvents();
-        limit_framerate(f, 120.0);
+        limit_framerate(get_relative_time(), 120.0);
     }
 
     if (adc.isStreamRunning()) {
