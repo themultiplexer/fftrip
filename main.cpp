@@ -1105,7 +1105,7 @@ void render(bool to_buffer){
             glUniform1f(glGetUniformLocation(font_program, "volume"), (float)left_frequencies[0]);
             glUseProgram(0);
             glEnable(GL_BLEND);
-            RenderText(font_program, std::to_string(time), -2.0f, -0.5f, 0.001f, glm::vec3(color[0], color[1], color[2]));
+            RenderText(font_program, std::to_string(time), 0.0f, 0.0f, 0.001f, glm::vec3(color[0], color[1], color[2]));
             glDisable(GL_BLEND);
         }
     } else {
@@ -1140,20 +1140,24 @@ void render(bool to_buffer){
             for (int i = 0; i < std::max(vbos1.size(), vbos2.size()); i++) {
                 std::vector<VERT> from = vbos1[std::min(i, (int)vbos1.size()-1)];
                 std::vector<VERT> to = vbos2[std::min(i, (int)vbos2.size()-1)];
-                std::vector<VERT> out = std::vector<VERT>(std::max(from.size(), to.size()));
-
-                for (int i = 0; i < out.size(); i++) {
-                    VERT f = from[std::min(i, (int)from.size()-1)];
-                    VERT t = to[std::min(i, (int)to.size()-1)];
-                    glm::vec3 o = lerp(glm::vec3(f.x, f.y, f.z), glm::vec3(t.x, t.y, t.z), effect_transition);
-                    out[i].x = o.x;
-                    out[i].y = o.y;
-                    out[i].z = o.z;
-                    out[i].vol = t.vol;
-                    out[i].frq = t.frq;
+                
+                if (to.size() > 0) {                
+                    std::vector<VERT> out = std::vector<VERT>(std::max(from.size(), to.size()));
+                    for (int i = 0; i < out.size(); i++) {
+                        VERT f = from[std::min(i, (int)from.size()-1)];
+                        VERT t = to[std::min(i, (int)to.size()-1)];
+                        glm::vec3 o = lerp(glm::vec3(f.x, f.y, f.z), glm::vec3(t.x, t.y, t.z), effect_transition);
+                        out[i].x = o.x;
+                        out[i].y = o.y;
+                        out[i].z = o.z;
+                        out[i].vol = t.vol;
+                        out[i].frq = t.frq;
+                    }
+                    main_draw(out);
+                } else {
+                    main_draw(from);
                 }
 
-                main_draw(out);
             }
         } else {
             for (int i = 0; i < vbos1.size(); i++) {
