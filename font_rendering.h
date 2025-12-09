@@ -110,15 +110,8 @@ void RenderText(GLuint shader, std::string text, float x, float y, float scale, 
 
     // iterate through all characters
     std::string::const_iterator c;
-    float width = 0.0f;
     glm::vec3 current_color = color;
-    for (c = text.begin(); c != text.end(); c++)
-    {
-        Character ch = Characters[*c];
-        width += ch.Size.x * scale + (ch.Advance >> 6) * scale;
-    }
 
-    x = -width/6.0f;
     for (c = text.begin(); c != text.end(); c++)
     {
         if (*c == ' ') {

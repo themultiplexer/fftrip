@@ -24,12 +24,14 @@ if individual:
         plt.show()
 '''
 
-points, normals = get_points("svgs/kittyclean.svg")
-points = np.roll(points, 500)
-normals = np.roll(normals, 500)
+points, normals = get_points("svgs/Mushroom-14.svg")
+#points = np.roll(points, 500)
+#normals = np.roll(normals, 500)
 print(len(points))
 fig = plt.figure()
 ax = fig.gca()
+
+print(points)
 
 #points[:,1] = -points[:,1]
 ax.scatter(points[:,0], points[:,1])

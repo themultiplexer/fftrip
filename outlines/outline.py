@@ -3,7 +3,6 @@ from svgoutline import svg_to_outlines
 import json
 import numpy as np
 
-
 def get_only_points(file):
     tree = ET.parse(file)
     root = tree.getroot()
@@ -17,6 +16,8 @@ def get_only_points(file):
 def get_points(file):
 
     outlines, h, w = get_only_points(file)
+
+    print(outlines)
 
     all_points = []
     all_normals = []
@@ -53,7 +54,6 @@ def get_points(file):
                 filtered.append(pi)
 
     interpolate = False
-
     if interpolate:
         interpsteps = 51
         print(len(all_points))
@@ -67,7 +67,6 @@ def get_points(file):
 
 
     clusterstrip = False
-
     if clusterstrip:
         print(len(all_points))
         stripped = []
@@ -95,7 +94,7 @@ def get_points(file):
     return all_points, np.array(all_normals)
 
 if __name__ == "__main__":
-    points, normals = get_points("svgs/kittyclean.svg")
+    points, normals = get_points("svgs/Mushroom-14.svg")
 
 
 

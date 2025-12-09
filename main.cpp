@@ -39,6 +39,7 @@
 #include <array>
 #include <thread>
 #include <fstream>
+#include <random>
 #include <ranges>
 #include <nlohmann/json.hpp>
 #include "audioanalyzer.h"
@@ -87,6 +88,7 @@ struct Preset {
     int effect_mode;
     int color_mode;
     int stereo_mode;
+    int drawing_mode;
     bool reactive_zoom_enabled;
     bool inverted_background;
     bool inverted_displacement;
@@ -110,6 +112,7 @@ void to_json(json& j, const Preset& p) {
     {"effect_mode", p.effect_mode},
     {"color_mode", p.color_mode},
     {"stereo_mode", p.stereo_mode},
+    {"drawing_mode", p.drawing_mode},
     {"inverted_background", p.inverted_background},
     {"inverted_displacement", p.inverted_displacement},
     {"camera_center", p.camera_center},
@@ -133,6 +136,7 @@ void from_json(const json& j, Preset& p) {
     j.at("effect_mode").get_to(p.effect_mode);
     j.at("color_mode").get_to(p.color_mode);
     j.at("stereo_mode").get_to(p.stereo_mode);
+    j.at("drawing_mode").get_to(p.drawing_mode);
     j.at("inverted_background").get_to(p.inverted_background);
     j.at("inverted_displacement").get_to(p.inverted_displacement);
     j.at("camera_center").get_to(p.camera_center);
@@ -167,6 +171,9 @@ kiss_fft_cfg cfg;
 int screen_width = 3840;
 int screen_height = 2160;
 float cam_speed = 0.004f;
+float countdown = 90.0f;
+
+bool switched = false;
 
 bool font_loaded;
 
@@ -198,6 +205,7 @@ float zoom_speed;
 system_clock::time_point start;
 
 float effect_transition = 0.0;
+bool preset_changed = false;
 
 cv::Mat image;
 glm::vec4 color = {1.0, 0.0, 0.0, 1.0};
@@ -212,6 +220,10 @@ int color_cycle = 0;
 std::chrono::time_point<std::chrono::steady_clock> last_beat, last_num_press;
 auto last_frame = std::chrono::high_resolution_clock::now();
 auto start_time = std::chrono::high_resolution_clock::now();
+
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_int_distribution<> distrib(1, 1000);
 
 bool wants_to_save = false;
 bool did_type_number = false;
@@ -494,20 +506,20 @@ void loop_key_check() {
     bool s = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
     bool d = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
     if (w) {
-        camera_center += glm::vec3(0.0f, -cam_speed, 0.0f);
-        camera_lookat += glm::vec3(0.0f, -cam_speed, 0.0f);
+        camera_center += glm::vec3(0.0f, cam_speed, 0.0f);
+        camera_lookat += glm::vec3(0.0f, cam_speed, 0.0f);
     }
     if (a) {
-        camera_center += glm::vec3(cam_speed, 0.0f, 0.0f);
-        camera_lookat += glm::vec3(cam_speed, 0.0f, 0.0f);
-    }
-    if (s) {
-        camera_center += glm::vec3(0.0f,cam_speed, 0.0f);
-        camera_lookat += glm::vec3(0.0f,cam_speed, 0.0f);
-    }
-    if (d) {
         camera_center += glm::vec3(-cam_speed, 0.0f, 0.0f);
         camera_lookat += glm::vec3(-cam_speed, 0.0f, 0.0f);
+    }
+    if (s) {
+        camera_center += glm::vec3(0.0f,-cam_speed, 0.0f);
+        camera_lookat += glm::vec3(0.0f,-cam_speed, 0.0f);
+    }
+    if (d) {
+        camera_center += glm::vec3(cam_speed, 0.0f, 0.0f);
+        camera_lookat += glm::vec3(cam_speed, 0.0f, 0.0f);
     }
     if (w || a || s || d) {
         set_camera(camera_center, camera_lookat);
@@ -519,9 +531,14 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
     if (action == GLFW_PRESS) {
         if (key == GLFW_KEY_ESCAPE) {
             glfwSetWindowShouldClose(window, GLFW_TRUE);
+        } else if (key == GLFW_KEY_SPACE) {
+            std::system("projectMSDL -f 1");
         } else if (key == GLFW_KEY_H) {
             current_preset.stereo_mode += 1;
-            current_preset.stereo_mode %= 6;
+            current_preset.stereo_mode %= 4;
+        } else if (key == GLFW_KEY_G) {
+            current_preset.drawing_mode += 1;
+            current_preset.drawing_mode %= 6;
         } else if (key == GLFW_KEY_I) {
             current_preset.inverted_displacement = !current_preset.inverted_displacement;
         } else if (key == GLFW_KEY_L) {
@@ -540,11 +557,8 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
             next_preset = current_preset;
             next_preset.mode = (VisMode)(next_preset.mode + 1);
             next_preset.mode = (VisMode)(next_preset.mode % 7);
-
-            if (next_preset.effect_mode != TEXT) {
-                next_preset.id = current_preset.id + 1;
-                effect_transition = 0.0;
-            }
+            preset_changed = true;
+            effect_transition = 0.0;
         } else if (key == GLFW_KEY_R) {
             camera_center = glm::make_vec3(current_preset.camera_center.data());
             camera_lookat = glm::make_vec3(current_preset.camera_lookat.data());
@@ -863,9 +877,7 @@ std::vector<VERT> create_vbo(std::array<float, 1024> frequencies, glm::vec2 from
 std::chrono::duration<double> get_relative_time() {
     using namespace std::chrono;
     auto now = high_resolution_clock::now();
-    auto frame_time = duration<double>(now - last_frame);
-    last_frame = high_resolution_clock::now();
-    return frame_time;
+    return duration<double>(now - last_frame);
 }
 
 void limit_framerate(duration<double> frame_time, double targetFPS) {
@@ -1038,17 +1050,47 @@ void calc_audio(){
     }
 }
 
+std::array<float, 1024> get_freuencies(int i) {
+        if (current_preset.stereo_mode == 0) {
+            return right_frequencies;
+        } else if (current_preset.stereo_mode == 1) {
+            return left_frequencies;
+        } else if (current_preset.stereo_mode == 2) {
+            return (i%2==0 ? right_frequencies : left_frequencies);
+        } else if (current_preset.stereo_mode == 3) {
+            return (i%2==0 ? left_frequencies : right_frequencies);
+        }
+}
+
+void set_next_preset(Preset next){
+    next_preset = next;
+    std::cerr << "Next preset\n";
+    if (next_preset.mode == TEXT || current_preset.mode == TEXT) {
+        current_preset = next_preset;
+        effect_transition = 1.0;
+    } else {
+        effect_transition = 0.0;
+    }
+    
+    rotation = 0.0;
+    camera_center = glm::make_vec3(next_preset.camera_center.data());
+    camera_lookat = glm::make_vec3(next_preset.camera_lookat.data());
+    set_camera(camera_center, camera_lookat, rotation);
+    preset_changed = true;
+}
+
+
 void render(bool to_buffer){
     if (to_buffer) {
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     }
     glLineWidth(current_preset.line_width);
-    glPointSize(10.0);
+    glPointSize(4.0);
     glClear(GL_COLOR_BUFFER_BIT);
     zoom_speed = current_preset.reactive_zoom_enabled ? (reactive_frequency * current_preset.zoom_sensitivity * 5.0f) : current_preset.zoom_sensitivity * 10.0;
 
     if (current_preset.color_mode == 1) {
-        int freq_index = std::distance(std::begin(left_frequencies), std::max_element(std::begin(left_frequencies), std::end(left_frequencies)));
+        int freq_index = std::distance(std::begin(left_frequencies), std::max_element(std::begin(left_frequencies), std::end(left_frequencies) - 100));
         float log_freq_index = ((float)freq_index / (float)1024);
         rgb rgbcolor = hsv2rgb(hsv{log_freq_index * 3.5 * 360.0, 1.0, 1.0});
         color[0] = rgbcolor.r;
@@ -1071,19 +1113,19 @@ void render(bool to_buffer){
     long time = duration_cast<nanoseconds>(system_clock::now() - start).count();
     
     bool lerpit = false;
-    if (current_preset.id != next_preset.id) {
-        if (effect_transition <= 1.0) {
+    if (preset_changed) {
+        if (effect_transition < 1.0) {
             lerpit = true;
             effect_transition += 0.01f;
         } else {
-            printf("done\n");
+            printf("lerp done\n");
             current_preset = next_preset;
             camera_center = glm::make_vec3(current_preset.camera_center.data());
             camera_lookat = glm::make_vec3(current_preset.camera_lookat.data());
             set_camera(camera_center, camera_lookat);
             effect = effects[current_preset.effect_mode];
-            last_frame = std::chrono::high_resolution_clock::now();
             lerpit = false;
+            preset_changed = false;
         }
     }
 
@@ -1100,12 +1142,23 @@ void render(bool to_buffer){
         }
         if (font_loaded) {        
             glUseProgram(font_program);
-            glUniform1f(glGetUniformLocation(font_program, "time"), (float)time);
             glUniform1f(glGetUniformLocation(font_program, "width"), (float)current_preset.line_width);
             glUniform1f(glGetUniformLocation(font_program, "volume"), (float)left_frequencies[0]);
             glUseProgram(0);
+
+            std::string text = std::to_string(time);
+            if (countdown > 0.0) {
+                std::stringstream stream;
+                stream << std::fixed << std::setprecision(3) << countdown;
+                text = stream.str();
+                countdown -= duration_cast<milliseconds>(get_relative_time()).count() / 1000.0f + 0.001;
+            } else if (!switched) {
+                set_next_preset(presets[1]);
+                switched = true;
+            }
+
             glEnable(GL_BLEND);
-            RenderText(font_program, std::to_string(time), 0.0f, 0.0f, 0.001f, glm::vec3(color[0], color[1], color[2]));
+            RenderText(font_program, text, 0.0f, 0.5f, 0.001f * current_preset.inner_radius * radius_factor, glm::vec3(color[0], color[1], color[2]));
             glDisable(GL_BLEND);
         }
     } else {
@@ -1118,21 +1171,21 @@ void render(bool to_buffer){
                                                 {{glm::vec2(-1.0, 0.1), glm::vec2(1.0, 0.1)}, {glm::vec2(-1.0, -0.1), glm::vec2(1.0, -0.1)}},
                                                 {{glm::vec2(1.0, 0.2), glm::vec2(-1.0, 0.2)}, {glm::vec2(1.0, -0.2), glm::vec2(-1.0, -0.2)}}
                                             };
-        auto m = main[current_preset.stereo_mode];
-        auto n = main[next_preset.stereo_mode];
+        auto m = main[current_preset.drawing_mode];
+        auto n = main[next_preset.drawing_mode];
 
         std::vector<std::vector<VERT>> vbos1;
         for (int i = 0; i < m.size(); i++) {
             float b = current_preset.inverted_displacement ? 1.0f : -1.0f;
             float s = current_preset.inverted_direction ? b : -b;
-            vbos1.push_back(create_vbo(i%2==0 ? left_frequencies : right_frequencies, m[i][0], m[i][1], i%2==0? b : s, current_preset));
+            vbos1.push_back(create_vbo(get_freuencies(i), m[i][0], m[i][1], i%2==0? b : s, current_preset));
         }
 
         std::vector<std::vector<VERT>> vbos2;
         for (int i = 0; i < n.size(); i++) {
             float b = next_preset.inverted_displacement ? 1.0f : -1.0f;
             float s = next_preset.inverted_direction ? b : -b;
-            vbos2.push_back(create_vbo(i%2==0 ? left_frequencies : right_frequencies, n[i][0], n[i][1], i%2==0? b : s, next_preset));
+            vbos2.push_back(create_vbo(get_freuencies(i), n[i][0], n[i][1], i%2==0? b : s, next_preset));
         }
 
         /* Here the transition (vertex interpolation) magic happens */
@@ -1169,7 +1222,9 @@ void render(bool to_buffer){
     if (to_buffer) {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
+    last_frame = std::chrono::high_resolution_clock::now();
 }
+
 
 void main_loop(double current_time) {
     auto now = std::chrono::steady_clock::now();
@@ -1193,14 +1248,8 @@ void main_loop(double current_time) {
                 }
                 wants_to_save = false;
             } else {
-                next_preset = presets[current_preset_index];
                 mixed_mat = cv::UMat(cv::Size(screen_width, screen_height), CV_8UC4);
-        
-                std::cerr << "Next preset\n";
-                if (next_preset.mode == TEXT || current_preset.mode == TEXT) {
-                    current_preset = next_preset;
-                }
-                effect_transition = 0.0;
+                set_next_preset(presets[current_preset_index]);
                 did_type_number = false;
             }
         }
@@ -1288,10 +1337,9 @@ int main() {
         std::cout << "Loaded people:\n";
     }
 
-    current_preset = presets[12];
-    next_preset = presets[12];
+    current_preset = next_preset = presets[0];
     effect = effects[current_preset.effect_mode];
-    
+    preset_changed = true;
 
     if (!glfwInit()) {
         exit(EXIT_FAILURE);
@@ -1337,7 +1385,7 @@ int main() {
         return 1;
     }
 
-    std::ifstream f("../outlines/data.json");
+    std::ifstream f("../outlines/kitty.json");
     json data = json::parse(f);
     for (auto d : data["points"]) {
         svg_points.push_back(glm::vec2(d[0], d[1]));

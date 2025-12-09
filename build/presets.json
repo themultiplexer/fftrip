@@ -2,174 +2,180 @@
     {
         "background_mode": 0,
         "camera_center": [
-            -0.03599999099969864,
-            -0.03400000184774399,
+            0.5920004844665527,
+            0.5480003952980042,
             1.0
         ],
         "camera_lookat": [
-            -0.03599999099969864,
-            -0.024000002071261406,
+            0.5920004844665527,
+            0.6480005979537964,
             0.0
         ],
         "color_mode": 1,
-        "effect_mode": 7,
+        "drawing_mode": 0,
+        "effect_mode": 9,
         "id": 0,
-        "inner_radius": 0.36000004410743713,
+        "inner_radius": 1.3599992990493774,
         "inverted_background": false,
         "inverted_direction": false,
-        "inverted_displacement": false,
-        "line_width": 10.0,
-        "mode": 1,
+        "inverted_displacement": true,
+        "line_width": 5.0,
+        "mode": 3,
         "move_to_beat": false,
-        "reactive_zoom_enabled": false,
-        "rotate_camera": true,
-        "sensitivity": 0.07999999821186066,
-        "stereo_mode": 1,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
         "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
         "background_mode": 0,
         "camera_center": [
-            -0.020000003278255463,
-            0.21199998259544373,
+            0.0,
+            -0.10000000149011612,
             1.0
         ],
         "camera_lookat": [
-            -0.020000003278255463,
-            0.012000015005469322,
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 1,
+        "inner_radius": 0.6999999284744263,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.16399994492530823,
+            -0.16399994492530823,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.16399994492530823,
+            -0.06399999558925629,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 7,
+        "id": 2,
+        "inner_radius": 0.5000001192092896,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 0,
+        "id": 3,
+        "inner_radius": 0.44000008702278137,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000001415610313,
+            -0.06599997729063034,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.03600001707673073,
+            0.028000017628073692,
             0.0
         ],
         "color_mode": 0,
-        "effect_mode": 6,
-        "id": 1,
-        "inner_radius": 0.3400000333786011,
+        "drawing_mode": 3,
+        "effect_mode": 4,
+        "id": 4,
+        "inner_radius": 0.8199998140335083,
         "inverted_background": false,
         "inverted_direction": false,
         "inverted_displacement": false,
         "line_width": 10.0,
         "mode": 1,
         "move_to_beat": true,
-        "reactive_zoom_enabled": true,
-        "rotate_camera": true,
-        "sensitivity": 0.03999999910593033,
-        "stereo_mode": 3,
-        "translate_object": false,
-        "zoom_sensitivity": 1.9999992847442627
-    },
-    {
-        "background_mode": 0,
-        "camera_center": [
-            -0.020000003278255463,
-            0.21199998259544373,
-            1.0
-        ],
-        "camera_lookat": [
-            -0.020000003278255463,
-            0.012000015005469322,
-            0.0
-        ],
-        "color_mode": 0,
-        "effect_mode": 6,
-        "id": 2,
-        "inner_radius": 0.30000001192092896,
-        "inverted_background": false,
-        "inverted_direction": false,
-        "inverted_displacement": false,
-        "line_width": 2.0,
-        "mode": 1,
-        "move_to_beat": false,
         "reactive_zoom_enabled": false,
-        "rotate_camera": true,
-        "sensitivity": 0.05000000819563866,
-        "stereo_mode": 3,
-        "translate_object": false,
-        "zoom_sensitivity": 1.25
-    },
-    {
-        "background_mode": 0,
-        "camera_center": [
-            0.01599999889731407,
-            0.18400003015995026,
-            1.0
-        ],
-        "camera_lookat": [
-            0.01599999889731407,
-            -0.015999987721443176,
-            0.0
-        ],
-        "color_mode": 0,
-        "effect_mode": 6,
-        "id": 3,
-        "inner_radius": 0.3400000333786011,
-        "inverted_background": false,
-        "inverted_direction": false,
-        "inverted_displacement": false,
-        "line_width": 10.0,
-        "mode": 1,
-        "move_to_beat": false,
-        "reactive_zoom_enabled": false,
-        "rotate_camera": true,
-        "sensitivity": 0.11000001430511475,
-        "stereo_mode": 3,
-        "translate_object": false,
-        "zoom_sensitivity": 1.4499998092651367
-    },
-    {
-        "background_mode": 0,
-        "camera_center": [
-            0.01599999889731407,
-            0.18400003015995026,
-            1.0
-        ],
-        "camera_lookat": [
-            0.01599999889731407,
-            -0.015999987721443176,
-            0.0
-        ],
-        "color_mode": 0,
-        "effect_mode": 6,
-        "id": 4,
-        "inner_radius": 0.7399998903274536,
-        "inverted_background": false,
-        "inverted_direction": false,
-        "inverted_displacement": false,
-        "line_width": 10.0,
-        "mode": 1,
-        "move_to_beat": false,
-        "reactive_zoom_enabled": false,
-        "rotate_camera": true,
-        "sensitivity": 0.11000001430511475,
-        "stereo_mode": 3,
-        "translate_object": false,
-        "zoom_sensitivity": 1.4499998092651367
-    },
-    {
-        "background_mode": 0,
-        "camera_center": [
-            -0.01884000562131405,
-            0.1139797791838646,
-            1.0
-        ],
-        "camera_lookat": [
-            -0.01884000562131405,
-            0.0009799960535019636,
-            0.0
-        ],
-        "color_mode": 0,
-        "effect_mode": 9,
-        "id": 5,
-        "inner_radius": 0.3399999141693115,
-        "inverted_background": false,
-        "inverted_direction": false,
-        "inverted_displacement": false,
-        "line_width": 10.0,
-        "mode": 5,
-        "move_to_beat": false,
-        "reactive_zoom_enabled": true,
         "rotate_camera": false,
-        "sensitivity": 0.5800000429153442,
-        "stereo_mode": 1,
+        "sensitivity": 0.11000001430511475,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.34999996423721313
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            0.21599997580051422,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.01600000262260437,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 5,
+        "inner_radius": 0.5,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
         "translate_object": false,
         "zoom_sensitivity": 0.5
     },
@@ -186,6 +192,7 @@
             0.0
         ],
         "color_mode": 1,
+        "drawing_mode": 2,
         "effect_mode": 5,
         "id": 6,
         "inner_radius": 0.7599998116493225,
@@ -215,6 +222,7 @@
             0.0
         ],
         "color_mode": 0,
+        "drawing_mode": 0,
         "effect_mode": 4,
         "id": 7,
         "inner_radius": 0.5,
@@ -244,6 +252,7 @@
             0.0
         ],
         "color_mode": 0,
+        "drawing_mode": 0,
         "effect_mode": 6,
         "id": 8,
         "inner_radius": 0.2599998712539673,
@@ -273,6 +282,7 @@
             0.0
         ],
         "color_mode": 0,
+        "drawing_mode": 3,
         "effect_mode": 6,
         "id": 9,
         "inner_radius": 0.8199998140335083,
@@ -302,6 +312,7 @@
             0.0
         ],
         "color_mode": 0,
+        "drawing_mode": 1,
         "effect_mode": 9,
         "id": 10,
         "inner_radius": 0.3399999141693115,
@@ -331,6 +342,7 @@
             0.0
         ],
         "color_mode": 0,
+        "drawing_mode": 3,
         "effect_mode": 4,
         "id": 1,
         "inner_radius": 0.8199998140335083,
@@ -350,89 +362,92 @@
     {
         "background_mode": 0,
         "camera_center": [
-            0.0,
-            -0.10000000149011612,
+            -0.015999987721443176,
+            -0.09200000017881393,
             1.0
         ],
         "camera_lookat": [
-            0.0,
-            0.0,
+            -0.015999987721443176,
+            0.00800001434981823,
             0.0
         ],
         "color_mode": 1,
-        "effect_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 7,
         "id": 12,
-        "inner_radius": 0.44000008702278137,
+        "inner_radius": 0.5000001192092896,
         "inverted_background": false,
         "inverted_direction": false,
-        "inverted_displacement": false,
+        "inverted_displacement": true,
         "line_width": 10.0,
-        "mode": 2,
-        "move_to_beat": true,
-        "reactive_zoom_enabled": false,
+        "mode": 1,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
         "rotate_camera": true,
-        "sensitivity": 1.1499994993209839,
-        "stereo_mode": 0,
+        "sensitivity": 0.5100001096725464,
+        "stereo_mode": 3,
         "translate_object": false,
         "zoom_sensitivity": 0.5
     },
     {
         "background_mode": 0,
         "camera_center": [
-            0.0,
-            -0.10000000149011612,
+            -0.020000003278255463,
+            0.21199998259544373,
             1.0
         ],
         "camera_lookat": [
-            0.0,
-            0.0,
+            -0.020000003278255463,
+            0.012000015005469322,
             0.0
         ],
-        "color_mode": 1,
-        "effect_mode": 4,
-        "id": 13,
-        "inner_radius": 0.7999998331069946,
-        "inverted_background": false,
-        "inverted_direction": false,
-        "inverted_displacement": false,
-        "line_width": 10.0,
-        "mode": 2,
-        "move_to_beat": true,
-        "reactive_zoom_enabled": true,
-        "rotate_camera": false,
-        "sensitivity": 1.1499994993209839,
-        "stereo_mode": 0,
-        "translate_object": false,
-        "zoom_sensitivity": 0.5
-    },
-    {
-        "background_mode": 0,
-        "camera_center": [
-            0.0,
-            -0.10000000149011612,
-            1.0
-        ],
-        "camera_lookat": [
-            0.0,
-            0.0,
-            0.0
-        ],
-        "color_mode": 1,
+        "color_mode": 0,
+        "drawing_mode": 1,
         "effect_mode": 6,
-        "id": 14,
-        "inner_radius": 0.7999998331069946,
+        "id": 13,
+        "inner_radius": 0.3400000333786011,
         "inverted_background": false,
         "inverted_direction": false,
         "inverted_displacement": false,
         "line_width": 10.0,
-        "mode": 2,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.024000002071261406,
+            0.1400001049041748,
+            1.0
+        ],
+        "camera_lookat": [
+            0.024000002071261406,
+            -0.059999994933605194,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 4,
+        "id": 14,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": true,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
         "move_to_beat": true,
         "reactive_zoom_enabled": true,
         "rotate_camera": false,
-        "sensitivity": 1.1499994993209839,
-        "stereo_mode": 0,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 1,
         "translate_object": false,
-        "zoom_sensitivity": 0.5
+        "zoom_sensitivity": 1.9999992847442627
     },
     {
         "background_mode": 0,
@@ -447,6 +462,7 @@
             0.0
         ],
         "color_mode": 1,
+        "drawing_mode": 0,
         "effect_mode": 7,
         "id": 15,
         "inner_radius": 0.5000001192092896,
@@ -476,6 +492,7 @@
             0.0
         ],
         "color_mode": 0,
+        "drawing_mode": 3,
         "effect_mode": 6,
         "id": 16,
         "inner_radius": 0.3400000333786011,
@@ -505,6 +522,7 @@
             0.0
         ],
         "color_mode": 0,
+        "drawing_mode": 0,
         "effect_mode": 3,
         "id": 17,
         "inner_radius": 0.5,
@@ -524,18 +542,109 @@
     {
         "background_mode": 0,
         "camera_center": [
+            0.019999992102384567,
+            0.6640007495880127,
+            1.0
+        ],
+        "camera_lookat": [
+            0.019999992102384567,
+            0.46400022506713867,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 18,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 4,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.019999992102384567,
+            0.19200001657009125,
+            1.0
+        ],
+        "camera_lookat": [
+            0.019999992102384567,
+            -0.008000008761882782,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 19,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.7880008816719055,
+            0.5280003547668457,
+            1.0
+        ],
+        "camera_lookat": [
+            0.7880008816719055,
+            0.6280005574226379,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 1,
+        "id": 0,
+        "inner_radius": 1.2799993753433228,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 3,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
             0.0,
-            0.09200002253055573,
+            -0.10000000149011612,
             1.0
         ],
         "camera_lookat": [
             0.0,
-            0.1919998973608017,
+            0.0,
             0.0
         ],
         "color_mode": 1,
+        "drawing_mode": 0,
         "effect_mode": 4,
-        "id": 18,
+        "id": 1,
         "inner_radius": 0.7999998331069946,
         "inverted_background": false,
         "inverted_direction": false,
@@ -553,8 +662,308 @@
     {
         "background_mode": 0,
         "camera_center": [
-            0.0020000007934868336,
-            -0.09700018912553787,
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 22,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5000001192092896
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 3,
+        "id": 3,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": true,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 5,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.5800000429153442,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.01599999889731407,
+            0.18400003015995026,
+            1.0
+        ],
+        "camera_lookat": [
+            0.01599999889731407,
+            -0.015999987721443176,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 4,
+        "inner_radius": 0.7399998903274536,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.11000001430511475,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.4499998092651367
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 9,
+        "id": 5,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 5,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.5800000429153442,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.011999985203146935,
+            -0.5360003709793091,
+            1.0
+        ],
+        "camera_lookat": [
+            0.05199999734759331,
+            -0.38600003719329834,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 2,
+        "effect_mode": 5,
+        "id": 6,
+        "inner_radius": 0.7599998116493225,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.15000000596046448,
+        "stereo_mode": 2,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            0.21599997580051422,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.01600000262260437,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 7,
+        "inner_radius": 0.5,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.012000001966953278,
+            0.20799998939037323,
+            1.0
+        ],
+        "camera_lookat": [
+            0.012000001966953278,
+            0.008000001311302185,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 6,
+        "id": 8,
+        "inner_radius": 0.2599998712539673,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.03600000590085983,
+            -0.09399998188018799,
+            1.0
+        ],
+        "camera_lookat": [
+            0.01999998837709427,
+            1.3969838619232178e-08,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 9,
+        "inner_radius": 0.8199998140335083,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.07000000774860382,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 9,
+        "id": 10,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.1600000113248825,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000001415610313,
+            -0.06599997729063034,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.03600001707673073,
+            0.028000017628073692,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 4,
+        "id": 1,
+        "inner_radius": 0.8199998140335083,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.11000001430511475,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.34999996423721313
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
             1.0
         ],
         "camera_lookat": [
@@ -563,20 +972,2031 @@
             0.0
         ],
         "color_mode": 1,
-        "effect_mode": 2,
-        "id": 19,
-        "inner_radius": 1.4000002145767212,
+        "drawing_mode": 0,
+        "effect_mode": 0,
+        "id": 12,
+        "inner_radius": 0.44000008702278137,
         "inverted_background": false,
         "inverted_direction": false,
-        "inverted_displacement": true,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 13,
+        "inner_radius": 0.7999998331069946,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 14,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.16399994492530823,
+            -0.16399994492530823,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.16399994492530823,
+            -0.06399999558925629,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 7,
+        "id": 15,
+        "inner_radius": 0.5000001192092896,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 16,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.10000006854534149
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 3,
+        "id": 17,
+        "inner_radius": 0.5,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.019999992102384567,
+            0.6640007495880127,
+            1.0
+        ],
+        "camera_lookat": [
+            0.019999992102384567,
+            0.46400022506713867,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 18,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 4,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.019999992102384567,
+            0.19200001657009125,
+            1.0
+        ],
+        "camera_lookat": [
+            0.019999992102384567,
+            -0.008000008761882782,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 19,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.7880008816719055,
+            0.5280003547668457,
+            1.0
+        ],
+        "camera_lookat": [
+            0.7880008816719055,
+            0.6280005574226379,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 1,
+        "id": 0,
+        "inner_radius": 1.2799993753433228,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 3,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 1,
+        "inner_radius": 0.7999998331069946,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 2,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5000001192092896
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 3,
+        "id": 3,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": true,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 5,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.5800000429153442,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.01599999889731407,
+            0.18400003015995026,
+            1.0
+        ],
+        "camera_lookat": [
+            0.01599999889731407,
+            -0.015999987721443176,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 4,
+        "inner_radius": 0.7399998903274536,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
         "line_width": 10.0,
         "mode": 1,
         "move_to_beat": false,
         "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.11000001430511475,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.4499998092651367
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 9,
+        "id": 5,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 5,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
         "rotate_camera": false,
-        "sensitivity": 0.2699999511241913,
+        "sensitivity": 0.5800000429153442,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.011999985203146935,
+            -0.5360003709793091,
+            1.0
+        ],
+        "camera_lookat": [
+            0.05199999734759331,
+            -0.38600003719329834,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 2,
+        "effect_mode": 5,
+        "id": 6,
+        "inner_radius": 0.7599998116493225,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.15000000596046448,
+        "stereo_mode": 2,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            0.21599997580051422,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.01600000262260437,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 7,
+        "inner_radius": 0.5,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.012000001966953278,
+            0.20799998939037323,
+            1.0
+        ],
+        "camera_lookat": [
+            0.012000001966953278,
+            0.008000001311302185,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 6,
+        "id": 8,
+        "inner_radius": 0.2599998712539673,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.03600000590085983,
+            -0.09399998188018799,
+            1.0
+        ],
+        "camera_lookat": [
+            0.01999998837709427,
+            1.3969838619232178e-08,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 9,
+        "inner_radius": 0.8199998140335083,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.07000000774860382,
         "stereo_mode": 3,
         "translate_object": false,
         "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 9,
+        "id": 10,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.1600000113248825,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000001415610313,
+            -0.06599997729063034,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.03600001707673073,
+            0.028000017628073692,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 4,
+        "id": 1,
+        "inner_radius": 0.8199998140335083,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.11000001430511475,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.34999996423721313
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 0,
+        "id": 12,
+        "inner_radius": 0.44000008702278137,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 13,
+        "inner_radius": 0.7999998331069946,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 14,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.16399994492530823,
+            -0.16399994492530823,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.16399994492530823,
+            -0.06399999558925629,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 7,
+        "id": 15,
+        "inner_radius": 0.5000001192092896,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 16,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.10000006854534149
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 3,
+        "id": 17,
+        "inner_radius": 0.5,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.019999992102384567,
+            0.6640007495880127,
+            1.0
+        ],
+        "camera_lookat": [
+            0.019999992102384567,
+            0.46400022506713867,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 18,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 4,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.019999992102384567,
+            0.19200001657009125,
+            1.0
+        ],
+        "camera_lookat": [
+            0.019999992102384567,
+            -0.008000008761882782,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 19,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.7880008816719055,
+            0.5280003547668457,
+            1.0
+        ],
+        "camera_lookat": [
+            0.7880008816719055,
+            0.6280005574226379,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 1,
+        "id": 0,
+        "inner_radius": 1.2799993753433228,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 3,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 1,
+        "inner_radius": 0.7999998331069946,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 2,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5000001192092896
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 3,
+        "id": 3,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": true,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 5,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.5800000429153442,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.01599999889731407,
+            0.18400003015995026,
+            1.0
+        ],
+        "camera_lookat": [
+            0.01599999889731407,
+            -0.015999987721443176,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 4,
+        "inner_radius": 0.7399998903274536,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.11000001430511475,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.4499998092651367
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 9,
+        "id": 5,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 5,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.5800000429153442,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.011999985203146935,
+            -0.5360003709793091,
+            1.0
+        ],
+        "camera_lookat": [
+            0.05199999734759331,
+            -0.38600003719329834,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 2,
+        "effect_mode": 5,
+        "id": 6,
+        "inner_radius": 0.7599998116493225,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.15000000596046448,
+        "stereo_mode": 2,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            0.21599997580051422,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.01600000262260437,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 7,
+        "inner_radius": 0.5,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.012000001966953278,
+            0.20799998939037323,
+            1.0
+        ],
+        "camera_lookat": [
+            0.012000001966953278,
+            0.008000001311302185,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 6,
+        "id": 8,
+        "inner_radius": 0.2599998712539673,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.03600000590085983,
+            -0.09399998188018799,
+            1.0
+        ],
+        "camera_lookat": [
+            0.01999998837709427,
+            1.3969838619232178e-08,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 9,
+        "inner_radius": 0.8199998140335083,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.07000000774860382,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 9,
+        "id": 10,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.1600000113248825,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000001415610313,
+            -0.06599997729063034,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.03600001707673073,
+            0.028000017628073692,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 4,
+        "id": 1,
+        "inner_radius": 0.8199998140335083,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.11000001430511475,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.34999996423721313
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 0,
+        "id": 12,
+        "inner_radius": 0.44000008702278137,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 13,
+        "inner_radius": 0.7999998331069946,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 14,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.16399994492530823,
+            -0.16399994492530823,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.16399994492530823,
+            -0.06399999558925629,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 7,
+        "id": 15,
+        "inner_radius": 0.5000001192092896,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 16,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.10000006854534149
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 3,
+        "id": 17,
+        "inner_radius": 0.5,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.019999992102384567,
+            0.6640007495880127,
+            1.0
+        ],
+        "camera_lookat": [
+            0.019999992102384567,
+            0.46400022506713867,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 18,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 4,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.019999992102384567,
+            0.19200001657009125,
+            1.0
+        ],
+        "camera_lookat": [
+            0.019999992102384567,
+            -0.008000008761882782,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 19,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.7880008816719055,
+            0.5280003547668457,
+            1.0
+        ],
+        "camera_lookat": [
+            0.7880008816719055,
+            0.6280005574226379,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 1,
+        "id": 0,
+        "inner_radius": 1.2799993753433228,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 3,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 1,
+        "inner_radius": 0.7999998331069946,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 2,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5000001192092896
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 3,
+        "id": 3,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": true,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 5,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.5800000429153442,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.01599999889731407,
+            0.18400003015995026,
+            1.0
+        ],
+        "camera_lookat": [
+            0.01599999889731407,
+            -0.015999987721443176,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 4,
+        "inner_radius": 0.7399998903274536,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.11000001430511475,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.4499998092651367
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 9,
+        "id": 5,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 5,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.5800000429153442,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.011999985203146935,
+            -0.5360003709793091,
+            1.0
+        ],
+        "camera_lookat": [
+            0.05199999734759331,
+            -0.38600003719329834,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 2,
+        "effect_mode": 5,
+        "id": 6,
+        "inner_radius": 0.7599998116493225,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.15000000596046448,
+        "stereo_mode": 2,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            0.21599997580051422,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.01600000262260437,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 7,
+        "inner_radius": 0.5,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.012000001966953278,
+            0.20799998939037323,
+            1.0
+        ],
+        "camera_lookat": [
+            0.012000001966953278,
+            0.008000001311302185,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 6,
+        "id": 8,
+        "inner_radius": 0.2599998712539673,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.03600000590085983,
+            -0.09399998188018799,
+            1.0
+        ],
+        "camera_lookat": [
+            0.01999998837709427,
+            1.3969838619232178e-08,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 9,
+        "inner_radius": 0.8199998140335083,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.07000000774860382,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.01884000562131405,
+            0.1139797791838646,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.01884000562131405,
+            0.0009799960535019636,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 1,
+        "effect_mode": 9,
+        "id": 10,
+        "inner_radius": 0.3399999141693115,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.1600000113248825,
+        "stereo_mode": 1,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000001415610313,
+            -0.06599997729063034,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.03600001707673073,
+            0.028000017628073692,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 4,
+        "id": 1,
+        "inner_radius": 0.8199998140335083,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.11000001430511475,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.34999996423721313
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 0,
+        "id": 12,
+        "inner_radius": 0.44000008702278137,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 4,
+        "id": 13,
+        "inner_radius": 0.7999998331069946,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 14,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.16399994492530823,
+            -0.16399994492530823,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.16399994492530823,
+            -0.06399999558925629,
+            0.0
+        ],
+        "color_mode": 1,
+        "drawing_mode": 0,
+        "effect_mode": 7,
+        "id": 15,
+        "inner_radius": 0.5000001192092896,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 2,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 1.1499994993209839,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            -0.020000003278255463,
+            0.21199998259544373,
+            1.0
+        ],
+        "camera_lookat": [
+            -0.020000003278255463,
+            0.012000015005469322,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 16,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 1,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 0.10000006854534149
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.0,
+            -0.10000000149011612,
+            1.0
+        ],
+        "camera_lookat": [
+            0.0,
+            0.0,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 0,
+        "effect_mode": 3,
+        "id": 17,
+        "inner_radius": 0.5,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": false,
+        "reactive_zoom_enabled": false,
+        "rotate_camera": false,
+        "sensitivity": 0.25,
+        "stereo_mode": 0,
+        "translate_object": false,
+        "zoom_sensitivity": 0.5
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.019999992102384567,
+            0.6640007495880127,
+            1.0
+        ],
+        "camera_lookat": [
+            0.019999992102384567,
+            0.46400022506713867,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 18,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 4,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": false,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
+    },
+    {
+        "background_mode": 0,
+        "camera_center": [
+            0.019999992102384567,
+            0.19200001657009125,
+            1.0
+        ],
+        "camera_lookat": [
+            0.019999992102384567,
+            -0.008000008761882782,
+            0.0
+        ],
+        "color_mode": 0,
+        "drawing_mode": 3,
+        "effect_mode": 6,
+        "id": 19,
+        "inner_radius": 0.3400000333786011,
+        "inverted_background": false,
+        "inverted_direction": false,
+        "inverted_displacement": false,
+        "line_width": 10.0,
+        "mode": 0,
+        "move_to_beat": true,
+        "reactive_zoom_enabled": true,
+        "rotate_camera": true,
+        "sensitivity": 0.03999999910593033,
+        "stereo_mode": 3,
+        "translate_object": false,
+        "zoom_sensitivity": 1.9999992847442627
     }
 ]
